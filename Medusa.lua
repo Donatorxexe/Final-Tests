@@ -74,10 +74,10 @@ local uiTabSound = createSound(6895079853, 0.15, 0.75)    -- deeper tab switch
 local uiToggleOnSound = createSound(6895079853, 0.2, 1.3) -- higher pitch ON
 local uiToggleOffSound = createSound(6895079853, 0.2, 0.9) -- lower pitch OFF
 
-local function playClick() pcall(function() uiClickSound:Play() end) end
-local function playTab() pcall(function() uiTabSound:Play() end) end
-local function playToggleOn() pcall(function() uiToggleOnSound:Play() end) end
-local function playToggleOff() pcall(function() uiToggleOffSound:Play() end) end
+local function playClick() pcall(function() if uiClickSound and uiClickSound.Parent then uiClickSound:Play() end end) end
+local function playTab() pcall(function() if uiTabSound and uiTabSound.Parent then uiTabSound:Play() end end) end
+local function playToggleOn() pcall(function() if uiToggleOnSound and uiToggleOnSound.Parent then uiToggleOnSound:Play() end end) end
+local function playToggleOff() pcall(function() if uiToggleOffSound and uiToggleOffSound.Parent then uiToggleOffSound:Play() end end) end
 
 -- ── Location Detection (runs ONCE) ──────────────────────────
 local myRegion = "??"   -- Player's own country (from locale)
@@ -580,8 +580,8 @@ local function createGui(name)
     sg.Name = name or ("Medusa_" .. math.random(100000, 999999))
     sg.ResetOnSpawn = false; sg.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     sg.DisplayOrder = 2147483647; sg.IgnoreGuiInset = true
-    local ok = pcall(function() sg.Parent = guiParent end)
-    if not ok then pcall(function() sg.Parent = CoreGui end); if not sg.Parent then sg.Parent = playerGui end end
+    local ok = pcall(function() sg.Parent = guiParent or CoreGui or playerGui end)
+    if not ok then pcall(function() sg.Parent = CoreGui end); if not sg.Parent then pcall(function() sg.Parent = playerGui end) end end
     pcall(function() if protect_gui then protect_gui(sg) elseif syn and syn.protect_gui then syn.protect_gui(sg) end end)
     return sg
 end
@@ -2160,10 +2160,10 @@ end
 addConn(RS.RenderStepped:Connect(function()
     if not st.running then return end
     globalFrames = globalFrames + 1
-    pcall(updateAimbot)
-    pcall(updateMovement)
-    pcall(updateUIElements)
-    pcall(updateESP)
+    pcall(function() updateAimbot() end)
+    pcall(function() updateMovement() end)
+    pcall(function() updateUIElements() end)
+    pcall(function() updateESP() end)
 end))
 
 -- Silent Aim v2 (Curve & Hit Chance)
@@ -2259,21 +2259,20 @@ if XC.hookmetamethod then pcall(function()
             end
         end
         -- S22: SILENT AIM — redirect Raycast/FindPartOnRay variations
-        if st.silentAim and obj.lockedTarget then
+        if st.silentAim and obj.lockedTarget and not checkcaller() then
             local part = getSilentTarget(obj.lockedTarget.Character)
             if part then
                 local pos = predictPosition(part, obj.lockedTarget.Character)
                 local curvedDir = applyCurve(camera.CFrame.Position, pos)
                 
                 if method == "Raycast" and self == Workspace then
-                    args[1] = camera.CFrame.Position
-                    args[2] = curvedDir * 1000
-                    return oldNc(self, unpack(args))
+                    local rayOrigin = camera.CFrame.Position
+                    local rayDirection = curvedDir * 1000
+                    return oldNc(self, rayOrigin, rayDirection, unpack(args, 3))
                 end
                 if method == "FindPartOnRay" or method == "FindPartOnRayWithIgnoreList" or method == "FindPartOnRayWithWhitelist" then
                     local newRay = Ray.new(camera.CFrame.Position, curvedDir * 1000)
-                    args[1] = newRay
-                    return oldNc(self, unpack(args))
+                    return oldNc(self, newRay, unpack(args, 2))
                 end
                 if method == "ScreenPointToRay" or method == "ViewportPointToRay" then
                     return Ray.new(camera.CFrame.Position, curvedDir)
