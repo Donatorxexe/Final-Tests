@@ -594,7 +594,10 @@ local function spDisable() end
 local CR = cfg.gui.cornerRadius
 
 local function mkCorner(parent, radius)
-    local c = Instance.new("UICorner", parent); c.CornerRadius = UDim.new(0, radius or CR); return c
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(0, radius or CR)
+    c.Parent = parent
+    return c
 end
 
 local function mkCard(parent, height, order)
@@ -1319,7 +1322,7 @@ end
 
 -- ── Slide Transition switchTab ─────────────────────────────
 local function switchTab(id)
-    playTab()
+    if typeof(playTab) == "function" then playTab() end
     local prevTab = obj.currentTab
     obj.currentTab = id
     for _, tab in ipairs(TABS) do
@@ -1346,15 +1349,19 @@ local function switchTab(id)
             -- Position relative to sidebar scroll container
             -- Each tab = 45px height + 10px padding + 8px top padding
             local yPos = 8 + (i - 1) * (45 + 10) + 8
-            TS:Create(tabIndicator, TweenInfo.new(0.25, Enum.EasingStyle.Back), {
-                Position = UDim2.new(0, 0, 0, yPos)
-            }):Play()
+            if tabIndicator and tabIndicator.Parent then
+                TS:Create(tabIndicator, TweenInfo.new(0.25, Enum.EasingStyle.Back), {
+                    Position = UDim2.new(0, 0, 0, yPos)
+                }):Play()
+            end
             -- Auto-scroll sidebar to show the active tab
             pcall(function()
-                local maxScroll = sidebar.AbsoluteCanvasSize.Y - sidebar.AbsoluteSize.Y
-                if maxScroll > 0 then
-                    local scrollTo = math.clamp(yPos - sidebar.AbsoluteSize.Y / 2, 0, maxScroll)
-                    sidebar.CanvasPosition = Vector2.new(0, scrollTo)
+                if sidebar and sidebar.Parent then
+                    local maxScroll = sidebar.AbsoluteCanvasSize.Y - sidebar.AbsoluteSize.Y
+                    if maxScroll > 0 then
+                        local scrollTo = math.clamp(yPos - sidebar.AbsoluteSize.Y / 2, 0, maxScroll)
+                        sidebar.CanvasPosition = Vector2.new(0, scrollTo)
+                    end
                 end
             end)
             break
@@ -3579,3 +3586,16 @@ print("  Cinematic Intro • Active HUD • Custom Cursor")
 print("  Glitch Animation • Boot Sounds • RGB Crosshair")
 print("═══════════════════════════════════════")
 print("Medusa v15.1: Cinematic Build Concluido")
+
+-- ── S32: FINAL BOOTSTRAP ──────────────────────────────────
+task.delay(0.1, function()
+    pcall(function()
+        if not getgenv().MedusaLoaded then return end
+        print("[Medusa] Finalizing environment sync...")
+        -- Re-verify camera one last time before full logic starts
+        if not camera then camera = Workspace.CurrentCamera end
+        -- Force initial tab sync
+        if obj.switchTab then obj.switchTab("status") end
+        print("[Medusa] 🐍 FULLY OPERATIONAL!")
+    end)
+end)
