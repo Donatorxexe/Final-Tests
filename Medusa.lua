@@ -1017,6 +1017,100 @@ local function Notify(titleOrText, textOrColor, durationOrNil)
     mkCorner(progTrack, 2)
 
     local progFill = Instance.new("Frame")
+    progFill.Size = UDim2.new(1, 0, 1, 0); progFill.BackgroundColor3 = color
+    progFill.BorderSizePixel = 0; progFill.Parent = progTrack; mkCorner(progFill, 2)
+    TS:Create(progFill, TweenInfo.new(duration, Enum.EasingStyle.Linear), { Size = UDim2.new(0, 0, 1, 0) }):Play()
+
+    -- Slide in
+    table.insert(notifStack, fr)
+    TS:Create(fr, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        Position = UDim2.new(1, -356, 1, -90 - ((#notifStack-1) * 86))
+    }):Play()
+
+    -- Auto-dismiss
+    task.delay(duration, function()
+        TS:Create(fr, TweenInfo.new(0.5, Enum.EasingStyle.Quint, Enum.EasingDirection.In), {
+            Position = UDim2.new(1, 360, 1, fr.Position.Y.Offset),
+            BackgroundTransparency = 1
+        }):Play()
+        task.wait(0.6)
+        pcall(function()
+            for i, v in ipairs(notifStack) do if v == fr then table.remove(notifStack, i) break end end
+            sg:Destroy()
+        end)
+    end)
+end
+local notify = Notify
+    
+    -- Toast stroke — uses accent color with rainbow support
+    local sk = Instance.new("UIStroke", fr); sk.Color = color; sk.Thickness = 1.5; sk.Transparency = 0.1
+    -- Register for rainbow if RGB is on
+    if cfg.rgb.stroke then
+        table.insert(obj.rgbElements, { obj = sk, prop = "Color", type = "stroke" })
+    end
+
+    -- Glass gradient (premium)
+    local grad = Instance.new("UIGradient", fr)
+    grad.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(30, 30, 40)),
+        ColorSequenceKeypoint.new(0.5, C.glass),
+        ColorSequenceKeypoint.new(1, C.bg)
+    })
+    grad.Rotation = 145
+
+    -- Left accent neon bar (animated — grows in from top)
+    local bar = Instance.new("Frame")
+    bar.Size = UDim2.new(0, 3, 0, 0); bar.Position = UDim2.new(0, 8, 0.1, 0)
+    bar.BackgroundColor3 = color; bar.BorderSizePixel = 0; bar.Parent = fr
+    mkCorner(bar, 2)
+    TS:Create(bar, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        Size = UDim2.new(0, 3, 0.8, 0)
+    }):Play()
+
+    -- Neon glow behind bar
+    local barGlow = Instance.new("Frame")
+    barGlow.Size = UDim2.new(0, 14, 0.8, 0); barGlow.Position = UDim2.new(0, 4, 0.1, 0)
+    barGlow.BackgroundColor3 = color; barGlow.BackgroundTransparency = 0.75
+    barGlow.BorderSizePixel = 0; barGlow.ZIndex = 0; barGlow.Parent = fr
+    mkCorner(barGlow, 6)
+
+    -- Icon circle (accent colored dot)
+    local iconDot = Instance.new("Frame")
+    iconDot.Size = UDim2.new(0, 6, 0, 6); iconDot.Position = UDim2.new(0, 20, 0, 12)
+    iconDot.BackgroundColor3 = color; iconDot.BorderSizePixel = 0; iconDot.Parent = fr
+    mkCorner(iconDot, 3)
+
+    -- Title label (bold + icon)
+    local titleLbl = Instance.new("TextLabel")
+    titleLbl.Size = UDim2.new(1, -44, 0, 16); titleLbl.Position = UDim2.new(0, 30, 0, 8)
+    titleLbl.BackgroundTransparency = 1; titleLbl.Font = Enum.Font.GothamBlack
+    titleLbl.TextSize = 11; titleLbl.TextColor3 = color
+    titleLbl.TextXAlignment = Enum.TextXAlignment.Left; titleLbl.Text = title; titleLbl.Parent = fr
+
+    -- Main text (message)
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(1, -44, 0, 22); lbl.Position = UDim2.new(0, 30, 0, 26)
+    lbl.BackgroundTransparency = 1; lbl.Font = Enum.Font.GothamSemibold
+    lbl.TextSize = 13; lbl.TextColor3 = Color3.new(1, 1, 1)
+    lbl.TextXAlignment = Enum.TextXAlignment.Left; lbl.TextWrapped = true
+    lbl.Text = text; lbl.Parent = fr
+
+    -- Timestamp + version
+    local timeLbl = Instance.new("TextLabel")
+    timeLbl.Size = UDim2.new(1, -44, 0, 12); timeLbl.Position = UDim2.new(0, 30, 0, 50)
+    timeLbl.BackgroundTransparency = 1; timeLbl.Font = Enum.Font.Gotham
+    timeLbl.TextSize = 9; timeLbl.TextColor3 = C.textMuted
+    timeLbl.TextXAlignment = Enum.TextXAlignment.Left
+    timeLbl.Text = "MEDUSA v15.1 • " .. os.date("%H:%M:%S"); timeLbl.Parent = fr
+
+    -- Progress bar (premium — glass track + colored fill that shrinks)
+    local progTrack = Instance.new("Frame")
+    progTrack.Size = UDim2.new(1, -24, 0, 3); progTrack.Position = UDim2.new(0, 12, 1, -8)
+    progTrack.BackgroundColor3 = Color3.fromRGB(40, 40, 50); progTrack.BackgroundTransparency = 0.4
+    progTrack.BorderSizePixel = 0; progTrack.Parent = fr
+    mkCorner(progTrack, 2)
+
+    local progFill = Instance.new("Frame")
     progFill.Size = UDim2.new(1, 0, 1, 0)
     progFill.BackgroundColor3 = color; progFill.BackgroundTransparency = 0.15
     progFill.BorderSizePixel = 0; progFill.Parent = progTrack
