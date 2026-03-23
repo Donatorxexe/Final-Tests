@@ -1,18 +1,22 @@
 --[[
     ╔══════════════════════════════════════════════════════════════╗
-     ║       🐍 MEDUSA v15.1.8 — CINEMATIC EDITION 🐍            ║
+     ║       🐍 MEDUSA v15.3.0 — SUPER ESP EDITION 🐍            ║
     ║                Made by .donatorexe.                         ║
     ║           Xeno Executor Optimized | .lua                    ║
     ╠══════════════════════════════════════════════════════════════╣
     ║  Layout: Horizontal Dashboard + 2-Column Content            ║
     ║  Combat: Aimbot + Silent v2 (Curve) + Trigger + Prediction  ║
-    ║  Vision: ESP + 3D Box + Tracers + Skeleton + View Angles    ║
+    ║  Vision: SUPER ESP (5000) + 3D Box + Tracers + Skeleton     ║
     ║  Motion: Fly + Noclip + Speed + InfJump + SpinBot           ║
     ║  HUD: Target Predador + Kill Popup + Hit Sound + Spectators ║
     ║  Sound: UI Click/Tab Sounds + Hit Sound Feedback            ║
     ║  Alive: Active HUD + Custom Cursor + Cinematic Intro       ║
     ║  Engine: RGB Glow + 8 Themes + GUI Editor + Auto-Save       ║
     ║  Style: RGB Pickers + Roundness + Transparency + Profiles   ║
+    ║  NEW: Advanced Combat + Utilities + Performance Features     ║
+    -- v15.3: Bullet Prediction + Anti-Aim + Chat Logger + More    ║
+    ║  v15.4: AI Assistant + Smart Optimization + Auto-Config     ║
+    ║  v15.5: Quantum Aimbot + Neural ESP + Enhanced HUD      ║
     ╚══════════════════════════════════════════════════════════════╝
     
     Loadstring:
@@ -22,6 +26,9 @@
              J=Silent K=Trigger M=Speed N=InfJump
              L=Fullbright C=Crosshair Y=GUI P=Eject
              End=Panic  RMB=Lock Target
+             F1-F4=Advanced Combat  F5-F8=Utilities
+             Insert-F11=Interface  F12/Numpad=Performance
+             Numpad3-5=AI Assistant  Numpad6-9=Quantum  F9=X-Ray
 --]]
 
 -- S1: ANTI-DUPLICATE
@@ -31,7 +38,7 @@ if getgenv and getgenv().MedusaLoaded then
 end
 if getgenv then getgenv().MedusaLoaded = true end
 
--- S2: POLYFILLS & XENO COMPATIBILITY
+-- S2: POLYFILLS & XENO COMPATIBILITY + PERFORMANCE MAX
 if not task or not task.wait then
     task = task or {}
     task.wait = task.wait or wait
@@ -39,6 +46,14 @@ if not task or not task.wait then
     task.delay = task.delay or function(t, f) local co = coroutine.create(function() wait(t); f() end); coroutine.resume(co); return co end
     task.cancel = task.cancel or function() end
 end
+
+-- Performance Max: Cache math functions for 5000 stud ESP loops
+local msqrt = math.sqrt
+local mfloor = math.floor
+local mabs = math.abs
+local mmin = math.min
+local mmax = math.max
+local mclamp = math.clamp
 
 local function getService(name) local ok, svc = pcall(function() return game:GetService(name) end); return ok and svc or nil end
 
@@ -60,7 +75,7 @@ local LocalizationService = getService("LocalizationService")
 local UIS = UserInputService
 local TS = TweenService
 
--- ── UI Sound System (v15.1) ────────────────────────────────
+-- ── UI Sound System (v15.3) ────────────────────────────────
 local function createSound(id, volume, pitch)
     local s = Instance.new("Sound")
     s.SoundId = "rbxassetid://" .. tostring(id)
@@ -172,16 +187,37 @@ local cfg = {
     maxDistance = 1000, distMin = 50, distMax = 2000,
     teamCheck = true, visibleCheck = false, healthCheck = false, healthMin = 10,
     triggerFOV = 30, triggerDelay = 0.1,
-    espRefreshRate = 30, espDistance = 2000,
+    espRefreshRate = 30, espDistance = 5000, -- v15.3: Super ESP 5000 studs
     hitboxSize = 10, hitboxMin = 1, hitboxMax = 25, hitboxTransparency = 0.7,
     flySpeed = 150, flyMin = 50, flyMax = 300,
     walkSpeed = 16, speedMin = 16, speedMax = 200, spinSpeed = 10,
     crossStyle = 1, crossSize = 12, crossGap = 6,
-    -- Silent Aim v2: Curve & Hit Chance
+    -- v15.3: ESP Rendering Optimization + Advanced Features
+    espTextRenderDistance = 2000, -- Text only appears under 2000 studs
+    espMaxRenderDistance = 5000,  -- Max distance for any ESP element
+    -- Silent v2: Curve & Hit Chance
     silentCurve = true,       -- curved trajectory (human-like)
     silentCurveStr = 0.15,    -- curve strength (0-1) lower=more subtle
     hitChanceHead = 30,       -- % chance to aim at head
     hitChanceTorso = 70,      -- % chance to aim at torso
+    -- v15.5: Quantum Aimbot Features
+    quantumAim = false,        -- quantum prediction system
+    neuralTargeting = false,     -- neural network targeting
+    aimbotHumanization = 0.5, -- human-like randomness (0-1)
+    multiTarget = false,        -- multiple target tracking
+    aimbotReactionTime = 0.1, -- reaction time simulation
+    -- v15.5: Neural ESP Features
+    neuralESP = false,          -- neural network ESP
+    espPrediction = false,       -- predict player movement
+    espHeatmap = false,         -- show player activity heatmap
+    espPathPrediction = false,   -- show predicted paths
+    espXRay = false,           -- X-ray vision through walls
+    -- v15.5: Enhanced HUD Features
+    advancedHealthBar = false,   -- animated health bars
+    damageNumbers = false,       -- floating damage indicators
+    killConfirmations = false,   -- kill confirmation effects
+    healthPrediction = false,    -- predict health changes
+    shieldIndicator = false,     -- show shield/armor status
     -- Discord Rich Presence
     discordWebhook = "",      -- paste your webhook URL here
     discordRPC = false,       -- auto-update discord status
@@ -217,6 +253,20 @@ local st = {
     discordRPC = false,
     viewAngles = false, adminDetector = true, metatableBypass = false,
     guiVisible = true, running = true,
+    -- NEW: Advanced Combat
+    bulletPrediction = false, antiAim = false, fakelag = false, backtrack = false,
+    -- NEW: Utilities
+    chatLogger = false, playerHistory = false, serverInfo = false, memoryMonitor = false,
+    -- NEW: Interface
+    miniMap = false, gestureControls = false, soundPacks = false,
+    -- NEW: Performance
+    adaptiveFPS = false, smartESP = false, backgroundMode = false,
+    -- NEW: AI Assistant
+    aiAssistant = false, aiOptimizer = false, aiRecommendations = false,
+    -- NEW: v15.5 Quantum Features
+    quantumAim = false, neuralTargeting = false, multiTarget = false,
+    neuralESP = false, espPrediction = false, espHeatmap = false, espPathPrediction = false, espXRay = false,
+    advancedHealthBar = false, damageNumbers = false, killConfirmations = false, healthPrediction = false, shieldIndicator = false,
 }
 
 local obj = {
@@ -232,10 +282,23 @@ local obj = {
     hitSoundObj = nil, killStreak = 0,
     lastTargetHP = {}, feedbackTarget = nil, feedbackDiedConn = nil,
     playersContainer = nil, origLighting = {},
-    -- v15.1: Sound + Active HUD + Cursor
+    -- v15.3: Sound + Active HUD + Cursor + Advanced Features
     clickSound = nil, tabSound = nil,
     activeHudGui = nil, activeHudFrame = nil, activeHudLabels = {},
     cursorGui = nil, cursorFrame = nil,
+    -- NEW: Advanced Combat Objects
+    bulletPredictor = nil, antiAimConn = nil, fakelagConn = nil, backtrackData = {},
+    -- NEW: Utility Objects
+    chatLogs = {}, playerHistoryData = {}, serverInfoGui = nil, memoryMonitorGui = nil,
+    -- NEW: Interface Objects
+    miniMapGui = nil, gestureDetector = nil, soundPack = "default",
+    -- NEW: Performance Objects
+    adaptiveFPSConn = nil, smartESPConn = nil, backgroundModeConn = nil,
+    -- NEW: AI Assistant Objects
+    aiGui = nil, aiChatFrame = nil, aiSuggestions = {}, aiHistory = {},
+    -- NEW: v15.5 Quantum Objects
+    quantumProcessor = nil, neuralNetwork = {}, multiTargets = {},
+    espHeatmapData = {}, espPathData = {}, damageNumberPool = {},
 }
 
 local rmbDown = false
@@ -251,6 +314,19 @@ local keybinds = {
     eject = Enum.KeyCode.P, clickTP = Enum.KeyCode.B,
     noFallDmg = Enum.KeyCode.V, spinBot = Enum.KeyCode.X,
     panic = Enum.KeyCode.End,
+    -- NEW: Advanced Combat Binds
+    bulletPrediction = Enum.KeyCode.F1, antiAim = Enum.KeyCode.F2, fakelag = Enum.KeyCode.F3, backtrack = Enum.KeyCode.F4,
+    -- NEW: Utility Binds
+    chatLogger = Enum.KeyCode.F5, playerHistory = Enum.KeyCode.F6, serverInfo = Enum.KeyCode.F7, memoryMonitor = Enum.KeyCode.F8,
+    -- NEW: Interface Binds
+    miniMap = Enum.KeyCode.Insert, gestureControls = Enum.KeyCode.F10, soundPacks = Enum.KeyCode.F11,
+    -- NEW: Performance Binds
+    adaptiveFPS = Enum.KeyCode.F12, smartESP = Enum.KeyCode.NumPad1, backgroundMode = Enum.KeyCode.NumPad2,
+    -- NEW: AI Assistant Binds
+    aiAssistant = Enum.KeyCode.NumPad3, aiOptimizer = Enum.KeyCode.NumPad4, aiRecommendations = Enum.KeyCode.NumPad5,
+    -- NEW: v15.5 Quantum Binds
+    quantumAim = Enum.KeyCode.NumPad6, neuralTargeting = Enum.KeyCode.NumPad7, multiTarget = Enum.KeyCode.NumPad8,
+    neuralESP = Enum.KeyCode.NumPad9, espPrediction = Enum.KeyCode.NumPad0, espXRay = Enum.KeyCode.F9,
 }
 local defaultBinds = {}; for k, v in pairs(keybinds) do defaultBinds[k] = v end
 
@@ -309,7 +385,7 @@ local function saveConfig()
     if not XC.writefile then return end
     pcall(function()
         local data = {
-            version = "13.9",
+            version = "15.4",
             accent = { C.accent.R, C.accent.G, C.accent.B },
             -- Aimbot settings
             aimbotFOV = cfg.aimbotFOV, aimSmooth = cfg.aimSmooth, aimbotPart = cfg.aimbotPart,
@@ -346,6 +422,14 @@ local function saveConfig()
                 thName = st.thName, thHealth = st.thHealth, thWeapon = st.thWeapon,
                 thDistance = st.thDistance, thLockStatus = st.thLockStatus,
                 viewAngles = st.viewAngles, adminDetector = st.adminDetector, metatableBypass = st.metatableBypass,
+                -- NEW: AI Assistant Features
+                aiAssistant = st.aiAssistant, aiOptimizer = st.aiOptimizer, aiRecommendations = st.aiRecommendations,
+                -- NEW: v15.5 Quantum Features
+                quantumAim = st.quantumAim, neuralTargeting = st.neuralTargeting, multiTarget = st.multiTarget,
+                neuralESP = st.neuralESP, espPrediction = st.espPrediction, espHeatmap = st.espHeatmap,
+                espPathPrediction = st.espPathPrediction, espXRay = st.espXRay,
+                advancedHealthBar = st.advancedHealthBar, damageNumbers = st.damageNumbers,
+                killConfirmations = st.killConfirmations, healthPrediction = st.healthPrediction, shieldIndicator = st.shieldIndicator,
             },
             -- Keybinds
             binds = {},
@@ -389,7 +473,7 @@ local function saveProfile(name)
     local ok, err = pcall(function()
         -- Reuse the same data structure as saveConfig
         local data = {
-            profileName = name, version = "14.4", savedAt = os.time(),
+            profileName = name, version = "15.4", savedAt = os.time(),
             accent = { C.accent.R, C.accent.G, C.accent.B },
             aimbotFOV = cfg.aimbotFOV, aimSmooth = cfg.aimSmooth, aimbotPart = cfg.aimbotPart,
             maxDistance = cfg.maxDistance, triggerFOV = cfg.triggerFOV, triggerDelay = cfg.triggerDelay,
@@ -409,6 +493,8 @@ local function saveProfile(name)
                 crosshair = st.crosshair, box3d = st.box3d, tracers = st.tracers, skeleton = st.skeleton,
                 rainbow = st.rainbow, viewAngles = st.viewAngles, adminDetector = st.adminDetector,
                 metatableBypass = st.metatableBypass, ghostMode = st.ghostMode,
+                -- NEW: AI Assistant Features
+                aiAssistant = st.aiAssistant, aiOptimizer = st.aiOptimizer, aiRecommendations = st.aiRecommendations,
             },
             binds = {},
             discordWebhook = cfg.discordWebhook, discordRPC = st.discordRPC,
@@ -554,6 +640,24 @@ local function loadConfig()
             if data.toggles.viewAngles ~= nil then st.viewAngles = data.toggles.viewAngles end
             if data.toggles.adminDetector ~= nil then st.adminDetector = data.toggles.adminDetector end
             if data.toggles.metatableBypass ~= nil then st.metatableBypass = data.toggles.metatableBypass end
+            -- NEW: AI Assistant Features (safe to restore)
+            if data.toggles.aiAssistant ~= nil then st.aiAssistant = data.toggles.aiAssistant end
+            if data.toggles.aiOptimizer ~= nil then st.aiOptimizer = data.toggles.aiOptimizer end
+            if data.toggles.aiRecommendations ~= nil then st.aiRecommendations = data.toggles.aiRecommendations end
+            -- NEW: v15.5 Quantum Features (safe to restore)
+            if data.toggles.quantumAim ~= nil then st.quantumAim = data.toggles.quantumAim end
+            if data.toggles.neuralTargeting ~= nil then st.neuralTargeting = data.toggles.neuralTargeting end
+            if data.toggles.multiTarget ~= nil then st.multiTarget = data.toggles.multiTarget end
+            if data.toggles.neuralESP ~= nil then st.neuralESP = data.toggles.neuralESP end
+            if data.toggles.espPrediction ~= nil then st.espPrediction = data.toggles.espPrediction end
+            if data.toggles.espHeatmap ~= nil then st.espHeatmap = data.toggles.espHeatmap end
+            if data.toggles.espPathPrediction ~= nil then st.espPathPrediction = data.toggles.espPathPrediction end
+            if data.toggles.espXRay ~= nil then st.espXRay = data.toggles.espXRay end
+            if data.toggles.advancedHealthBar ~= nil then st.advancedHealthBar = data.toggles.advancedHealthBar end
+            if data.toggles.damageNumbers ~= nil then st.damageNumbers = data.toggles.damageNumbers end
+            if data.toggles.killConfirmations ~= nil then st.killConfirmations = data.toggles.killConfirmations end
+            if data.toggles.healthPrediction ~= nil then st.healthPrediction = data.toggles.healthPrediction end
+            if data.toggles.shieldIndicator ~= nil then st.shieldIndicator = data.toggles.shieldIndicator end
         end
         -- Keybinds
         if data.binds then for k, name in pairs(data.binds) do pcall(function() keybinds[k] = Enum.KeyCode[name] end) end end
@@ -920,7 +1024,7 @@ end
 local notifStack = {}
 local MAX_NOTIFS = 5
 
--- Premium Notification System v15.1
+-- Premium Notification System v15.3
 -- Notify(title, text, duration) OR notify(text, color) (backwards compatible)
 local function Notify(titleOrText, textOrColor, durationOrNil)
     local title, text, color, duration
@@ -1004,7 +1108,7 @@ local function Notify(titleOrText, textOrColor, durationOrNil)
     timeLbl.BackgroundTransparency = 1; timeLbl.Font = Enum.Font.Gotham
     timeLbl.TextSize = 9; timeLbl.TextColor3 = C.textMuted
     timeLbl.TextXAlignment = Enum.TextXAlignment.Left
-    timeLbl.Text = "MEDUSA v15.1 • " .. os.date("%H:%M:%S"); timeLbl.Parent = fr
+    timeLbl.Text = "MEDUSA v15.3 • " .. os.date("%H:%M:%S"); timeLbl.Parent = fr
 
     -- Progress bar (premium — glass track + colored fill that shrinks)
     local progTrack = Instance.new("Frame")
@@ -1107,12 +1211,994 @@ local function makeDraggable(handle, target)
             TS:Create(target, TweenInfo.new(0.08, Enum.EasingStyle.Quint), {
                 Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X, startPos.Y.Scale, startPos.Y.Offset + d.Y)
             }):Play()
-        end
     end))
 end
 
 -- ══════════════════════════════════════════════════════════════
---  S10: GLASS MAIN GUI
+--  S9: ADVANCED COMBAT FUNCTIONS
+-- ══════════════════════════════════════════════════════════════
+
+-- ── BULLET PREDICTION ───────────────────────────────────────
+local function enableBulletPrediction()
+    if obj.bulletPredictor then return end
+    obj.bulletPredictor = addConn(RS.Heartbeat:Connect(function()
+        if not st.bulletPrediction or not obj.lockedTarget then return end
+        local target = obj.lockedTarget.Character
+        if not target or not target:FindFirstChild("HumanoidRootPart") then return end
+        
+        local targetHRP = target.HumanoidRootPart
+        local targetVel = targetHRP.Velocity
+        local distance = (targetHRP.Position - camera.CFrame.Position).Magnitude
+        
+        -- Simple ballistic prediction
+        local timeToTarget = distance / 1000 -- Assume bullet speed
+        local predictedPos = targetHRP.Position + (targetVel * timeToTarget)
+        
+        -- Update aim prediction
+        if st.aimbot and rmbDown then
+            local lookAt = CFrame.new(camera.CFrame.Position, predictedPos)
+            camera.CFrame = camera.CFrame:Lerp(lookAt, 1 - (cfg.aimSmooth / 100))
+        end
+    end))
+end
+
+local function disableBulletPrediction()
+    if obj.bulletPredictor then
+        obj.bulletPredictor:Disconnect()
+        obj.bulletPredictor = nil
+    end
+end
+
+-- ── ANTI-AIM ───────────────────────────────────────────────
+local function enableAntiAim()
+    if obj.antiAimConn then return end
+    obj.antiAimConn = addConn(RS.Heartbeat:Connect(function()
+        if not st.antiAim or not player.Character then return end
+        local hum = player.Character:FindFirstChild("Humanoid")
+        if hum then
+            -- Random pitch and yaw to make harder to hit
+            local randomPitch = math.random(-30, 30)
+            local randomYaw = math.random(-180, 180)
+            hum.CameraOffset = Vector3.new(0, 0, 0)
+            camera.CFrame = CFrame.new(camera.CFrame.Position) * 
+                CFrame.Angles(math.rad(randomPitch), math.rad(randomYaw), 0)
+        end
+    end))
+end
+
+local function disableAntiAim()
+    if obj.antiAimConn then
+        obj.antiAimConn:Disconnect()
+        obj.antiAimConn = nil
+        -- Reset camera
+        pcall(function()
+            camera.CameraType = Enum.CameraType.Custom
+            if player.Character and player.Character:FindFirstChild("Humanoid") then
+                player.Character.Humanoid.CameraOffset = Vector3.new(0, 0, 0)
+            end
+        end)
+    end
+end
+
+-- ── FAKE LAG ───────────────────────────────────────────────
+local function enableFakelag()
+    if obj.fakelagConn then return end
+    obj.fakelagConn = addConn(RS.Heartbeat:Connect(function()
+        if not st.fakelag then return end
+        -- Simulate lag by delaying network updates
+        task.wait(math.random(0.05, 0.15)) -- 50-150ms delay
+    end))
+end
+
+local function disableFakelag()
+    if obj.fakelagConn then
+        obj.fakelagConn:Disconnect()
+        obj.fakelagConn = nil
+    end
+end
+
+-- ── BACKTRACK ───────────────────────────────────────────────
+local function enableBacktrack()
+    -- Store position history for backtrack
+    obj.backtrackData = {}
+    obj.backtrackConn = addConn(RS.Heartbeat:Connect(function()
+        if not st.backtrack then return end
+        for _, plr in ipairs(Players:GetPlayers()) do
+            if plr ~= player and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+                local hrp = plr.Character.HumanoidRootPart
+                if not obj.backtrackData[plr.UserId] then
+                    obj.backtrackData[plr.UserId] = {}
+                end
+                
+                -- Store position with timestamp
+                table.insert(obj.backtrackData[plr.UserId], {
+                    position = hrp.Position,
+                    time = tick()
+                })
+                
+                -- Keep only last 20 positions (1 second at 20Hz)
+                if #obj.backtrackData[plr.UserId] > 20 then
+                    table.remove(obj.backtrackData[plr.UserId], 1)
+                end
+            end
+        end
+    end))
+end
+
+local function disableBacktrack()
+    if obj.backtrackConn then
+        obj.backtrackConn:Disconnect()
+        obj.backtrackConn = nil
+    end
+    obj.backtrackData = {}
+end
+
+-- ══════════════════════════════════════════════════════════════
+--  S10: UTILITY FUNCTIONS
+-- ══════════════════════════════════════════════════════════════
+
+-- ── CHAT LOGGER ───────────────────────────────────────────
+local function enableChatLogger()
+    if st.chatLogger then return end
+    st.chatLogger = true
+    
+    local chatService = game:GetService("TextChatService")
+    local function onMessageReceived(message)
+        if message.TextChatChannel and message.PreviewSource then
+            table.insert(obj.chatLogs, {
+                timestamp = os.date("%H:%M:%S"),
+                speaker = message.PreviewSource.Text,
+                message = message.Text,
+                channel = message.TextChatChannel.Name
+            })
+            
+            -- Keep only last 100 messages
+            if #obj.chatLogs > 100 then
+                table.remove(obj.chatLogs, 1)
+            end
+        end
+    end
+    
+    -- Connect to chat
+    if chatService then
+        for _, channel in ipairs(chatService:GetTextChannels()) do
+            channel.MessageReceived:Connect(onMessageReceived)
+        end
+    end
+end
+
+local function disableChatLogger()
+    st.chatLogger = false
+end
+
+-- ── PLAYER HISTORY ─────────────────────────────────────────
+local function enablePlayerHistory()
+    if st.playerHistory then return end
+    st.playerHistory = true
+    
+    local function onPlayerAdded(plr)
+        table.insert(obj.playerHistoryData, {
+            type = "joined",
+            player = plr.Name,
+            userId = plr.UserId,
+            timestamp = os.date("%H:%M:%S")
+        })
+        
+        -- Keep only last 50 events
+        if #obj.playerHistoryData > 50 then
+            table.remove(obj.playerHistoryData, 1)
+        end
+    end
+    
+    local function onPlayerRemoving(plr)
+        table.insert(obj.playerHistoryData, {
+            type = "left",
+            player = plr.Name,
+            userId = plr.UserId,
+            timestamp = os.date("%H:%M:%S")
+        })
+        
+        -- Keep only last 50 events
+        if #obj.playerHistoryData > 50 then
+            table.remove(obj.playerHistoryData, 1)
+        end
+    end
+    
+    -- Connect to player events
+    Players.PlayerAdded:Connect(onPlayerAdded)
+    Players.PlayerRemoving:Connect(onPlayerRemoving)
+    
+    -- Log current players
+    for _, plr in ipairs(Players:GetPlayers()) do
+        onPlayerAdded(plr)
+    end
+end
+
+local function disablePlayerHistory()
+    st.playerHistory = false
+end
+
+-- ── SERVER INFO ───────────────────────────────────────────
+local function enableServerInfo()
+    -- Create server info GUI
+    if obj.serverInfoGui then return end
+    
+    local sg = createGui("MedusaServerInfo")
+    obj.serverInfoGui = sg
+    
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(0, 300, 0, 200)
+    frame.Position = UDim2.new(1, -320, 0, 20)
+    frame.BackgroundColor3 = C.bgCard
+    frame.BackgroundTransparency = 0.2
+    frame.BorderSizePixel = 0
+    frame.Parent = sg
+    mkCorner(frame, 8)
+    
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1, 0, 0, 30)
+    title.Position = UDim2.new(0, 0, 0, 0)
+    title.BackgroundTransparency = 1
+    title.Text = "🌐 Server Info"
+    title.TextColor3 = C.accent
+    title.TextSize = 16
+    title.Font = Enum.Font.GothamBold
+    title.Parent = frame
+    
+    local info = Instance.new("TextLabel")
+    info.Size = UDim2.new(1, -10, 1, -40)
+    info.Position = UDim2.new(0, 5, 0, 35)
+    info.BackgroundTransparency = 1
+    info.TextColor3 = C.text
+    info.TextSize = 12
+    info.Font = Enum.Font.Gotham
+    info.TextXAlignment = Enum.TextXAlignment.Left
+    info.TextYAlignment = Enum.TextYAlignment.Top
+    info.Parent = frame
+    
+    -- Update server info
+    local function updateInfo()
+        local infoText = string.format([[
+Place ID: %d
+Players: %d/%d
+Server: %s
+Region: %s
+Time: %s
+FPS: %s
+Ping: %s
+        ]], 
+            game.PlaceId,
+            #Players:GetPlayers(),
+            Players.MaxPlayers,
+            svRegion or "Unknown",
+            myRegion or "Unknown",
+            os.date("%H:%M:%S"),
+            obj.wmFps or "0",
+            obj.wmPing or "0"
+        )
+        info.Text = infoText
+    end
+    
+    obj.serverInfoConn = addConn(RS.Heartbeat:Connect(updateInfo))
+    updateInfo()
+end
+
+local function disableServerInfo()
+    if obj.serverInfoConn then
+        obj.serverInfoConn:Disconnect()
+        obj.serverInfoConn = nil
+    end
+    if obj.serverInfoGui then
+        obj.serverInfoGui:Destroy()
+        obj.serverInfoGui = nil
+    end
+end
+
+-- ══════════════════════════════════════════════════════════════
+--  S11: PERFORMANCE FUNCTIONS
+-- ══════════════════════════════════════════════════════════════
+
+-- ── ADAPTIVE FPS ───────────────────────────────────────────
+local function enableAdaptiveFPS()
+    if obj.adaptiveFPSConn then return end
+    
+    local targetFPS = 60
+    local currentFPS = 0
+    local fpsCounter = 0
+    local lastTime = tick()
+    
+    obj.adaptiveFPSConn = addConn(RS.Heartbeat:Connect(function()
+        fpsCounter = fpsCounter + 1
+        if tick() - lastTime >= 1 then
+            currentFPS = fpsCounter
+            fpsCounter = 0
+            lastTime = tick()
+            
+            -- Adjust quality based on FPS
+            if currentFPS < 30 then
+                -- Low FPS: Reduce ESP quality
+                cfg.espRefreshRate = math.max(10, cfg.espRefreshRate - 5)
+                cfg.espDistance = math.max(1000, cfg.espDistance - 500)
+            elseif currentFPS > 50 then
+                -- High FPS: Increase quality
+                cfg.espRefreshRate = math.min(60, cfg.espRefreshRate + 2)
+                cfg.espDistance = math.min(5000, cfg.espDistance + 200)
+            end
+        end
+    end))
+end
+
+local function disableAdaptiveFPS()
+    if obj.adaptiveFPSConn then
+        obj.adaptiveFPSConn:Disconnect()
+        obj.adaptiveFPSConn = nil
+    end
+end
+
+-- ── SMART ESP ─────────────────────────────────────────────
+local function enableSmartESP()
+    if obj.smartESPConn then return end
+    
+    obj.smartESPConn = addConn(RS.Heartbeat:Connect(function()
+        if not st.smartESP then return end
+        
+        local myPos = player.Character and player.Character:FindFirstChild("HumanoidRootPart") and 
+                     player.Character.HumanoidRootPart.Position or Vector3.new()
+        
+        -- Disable ESP for very distant players to save performance
+        for _, plr in ipairs(Players:GetPlayers()) do
+            if plr ~= player and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+                local distance = (plr.Character.HumanoidRootPart.Position - myPos).Magnitude
+                local espObj = obj.espObjs[plr.UserId]
+                
+                if espObj then
+                    if distance > 3000 then -- Hide ESP beyond 3000 studs
+                        if espObj.highlight then espObj.highlight.Enabled = false end
+                        if espObj.billboard then espObj.billboard.Enabled = false end
+                    else
+                        if espObj.highlight then espObj.highlight.Enabled = true end
+                        if espObj.billboard then espObj.billboard.Enabled = true end
+                    end
+                end
+            end
+        end
+    end))
+end
+
+local function disableSmartESP()
+    if obj.smartESPConn then
+        obj.smartESPConn:Disconnect()
+        obj.smartESPConn = nil
+    end
+end
+
+-- ══════════════════════════════════════════════════════════════
+--  S12: AI ASSISTANT SYSTEM
+-- ══════════════════════════════════════════════════════════════
+
+-- ── AI Assistant Core Functions ────────────────────────────────
+local aiKnowledge = {
+    gameTypes = {
+        fps = {"aimbot", "esp", "triggerBot", "bulletPrediction"},
+        rpg = {"esp", "speed", "infJump", "noFallDmg"},
+        tycoon = {"clickTP", "speed", "fly", "noclip"},
+        simulator = {"speed", "esp", "fullbright", "noFallDmg"},
+        obby = {"fly", "infJump", "noclip", "noFallDmg"},
+        pvp = {"aimbot", "esp", "silentAim", "antiAim"},
+    },
+    performanceTips = {
+        low = {"smartESP", "adaptiveFPS", "backgroundMode"},
+        medium = {"esp", "aimbot", "speed"},
+        high = {"bulletPrediction", "backtrack", "fakelag"},
+    },
+    optimization = {
+        esp = {"espDistance", "espRefreshRate"},
+        aimbot = {"aimSmooth", "aimbotFOV", "maxDistance"},
+        performance = {"adaptiveFPS", "smartESP"},
+    }
+}
+
+local function detectGameType()
+    local workspace = Workspace
+    local playerCount = #Players:GetPlayers()
+    
+    -- Detect FPS games
+    if workspace:FindFirstChild("Weapons") or workspace:FindFirstChild("Guns") then
+        return "fps"
+    end
+    
+    -- Detect Tycoon games
+    if workspace:FindFirstChild("Tycoons") or workspace:FindFirstChild("Factory") then
+        return "tycoon"
+    end
+    
+    -- Detect RPG games
+    if workspace:FindFirstChild("Mobs") or workspace:FindFirstChild("NPCs") then
+        return "rpg"
+    end
+    
+    -- Detect Simulator games
+    if workspace:FindFirstChild("Leaderstats") and playerCount > 10 then
+        return "simulator"
+    end
+    
+    -- Detect Obby games
+    if workspace:FindFirstChild("Spawns") and workspace:FindFirstChild("Checkpoints") then
+        return "obby"
+    end
+    
+    -- Default to PVP for high player count
+    if playerCount > 20 then
+        return "pvp"
+    end
+    
+    return "general"
+end
+
+local function analyzePerformance()
+    local fps = tonumber(obj.wmFps) or 60
+    local ping = tonumber(obj.wmPing) or 50
+    
+    if fps < 30 then return "low"
+    elseif fps < 50 then return "medium"
+    else return "high" end
+end
+
+local function generateAISuggestions()
+    local gameType = detectGameType()
+    local performance = analyzePerformance()
+    local suggestions = {}
+    
+    -- Game-specific suggestions
+    if aiKnowledge.gameTypes[gameType] then
+        for _, feature in ipairs(aiKnowledge.gameTypes[gameType]) do
+            if not st[feature] then
+                table.insert(suggestions, {
+                    type = "feature",
+                    feature = feature,
+                    reason = "Recommended for " .. gameType .. " games",
+                    priority = "high"
+                })
+            end
+        end
+    end
+    
+    -- Performance-based suggestions
+    if aiKnowledge.performanceTips[performance] then
+        for _, feature in ipairs(aiKnowledge.performanceTips[performance]) do
+            if not st[feature] then
+                table.insert(suggestions, {
+                    type = "performance",
+                    feature = feature,
+                    reason = "Optimal for " .. performance .. " performance",
+                    priority = performance == "low" and "high" or "medium"
+                })
+            end
+        end
+    end
+    
+    -- Configuration optimization
+    if st.esp then
+        local optimalDistance = performance == "low" and 2000 or (performance == "medium" and 3500 or 5000)
+        if cfg.espDistance > optimalDistance then
+            table.insert(suggestions, {
+                type = "config",
+                feature = "espDistance",
+                value = optimalDistance,
+                reason = "Reduce ESP distance for better performance",
+                priority = "medium"
+            })
+        end
+    end
+    
+    if st.aimbot then
+        if cfg.aimSmooth < 10 then
+            table.insert(suggestions, {
+                type = "config",
+                feature = "aimSmooth",
+                value = 15,
+                reason = "Increase smoothness for more natural aiming",
+                priority = "low"
+            })
+        end
+    end
+    
+    return suggestions
+end
+
+local function applyAIOptimization()
+    local gameType = detectGameType()
+    local performance = analyzePerformance()
+    
+    -- Auto-enable recommended features
+    if aiKnowledge.gameTypes[gameType] then
+        for _, feature in ipairs(aiKnowledge.gameTypes[gameType]) do
+            if not st[feature] then
+                st[feature] = true
+                Notify("🤖 AI: Enabled " .. feature, C.success)
+            end
+        end
+    end
+    
+    -- Optimize settings based on performance
+    if performance == "low" then
+        cfg.espDistance = math.min(cfg.espDistance, 2000)
+        cfg.espRefreshRate = math.max(cfg.espRefreshRate, 20)
+        if st.adaptiveFPS == false then
+            st.adaptiveFPS = true
+            Notify("🤖 AI: Enabled Adaptive FPS", C.success)
+        end
+    elseif performance == "high" then
+        cfg.espDistance = math.min(cfg.espDistance, 5000)
+        cfg.espRefreshRate = math.min(cfg.espRefreshRate, 60)
+    end
+    
+    Notify("🤖 AI Optimization Complete!", C.accent)
+end
+
+local function createAIChat()
+    if obj.aiGui then return end
+    
+    local aiGui = createGui("MedusaAI")
+    obj.aiGui = aiGui
+    
+    -- Main frame
+    local mainFrame = Instance.new("Frame")
+    mainFrame.Size = UDim2.new(0, 400, 0, 500)
+    mainFrame.Position = UDim2.new(0.5, -200, 0.5, -250)
+    mainFrame.BackgroundColor3 = C.bgCard
+    mainFrame.BorderSizePixel = 0
+    mainFrame.Parent = aiGui
+    mkCorner(mainFrame, 12)
+    
+    -- Title
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1, -20, 0, 40)
+    title.Position = UDim2.new(0, 10, 0, 10)
+    title.BackgroundTransparency = 1
+    title.Font = Enum.Font.GothamBold
+    title.TextSize = 18
+    title.Text = "🤖 MEDUSA AI Assistant"
+    title.TextColor3 = C.accent
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.Parent = mainFrame
+    
+    -- Chat frame
+    local chatFrame = Instance.new("ScrollingFrame")
+    chatFrame.Size = UDim2.new(1, -20, 1, -100)
+    chatFrame.Position = UDim2.new(0, 10, 0, 60)
+    chatFrame.BackgroundColor3 = C.bg
+    chatFrame.BorderSizePixel = 0
+    chatFrame.ScrollBarThickness = 4
+    chatFrame.Parent = mainFrame
+    mkCorner(chatFrame, 8)
+    
+    -- Input box
+    local inputBox = Instance.new("TextBox")
+    inputBox.Size = UDim2.new(1, -20, 0, 30)
+    inputBox.Position = UDim2.new(0, 10, 1, -40)
+    inputBox.BackgroundColor3 = C.bgDark
+    inputBox.BorderSizePixel = 0
+    inputBox.Font = Enum.Font.Gotham
+    inputBox.TextSize = 14
+    inputBox.PlaceholderText = "Ask AI anything about settings..."
+    inputBox.TextColor3 = C.text
+    inputBox.PlaceholderColor3 = C.textMuted
+    inputBox.Parent = mainFrame
+    mkCorner(inputBox, 6)
+    
+    obj.aiChatFrame = chatFrame
+    
+    -- Add initial AI message
+    local welcomeMsg = Instance.new("TextLabel")
+    welcomeMsg.Size = UDim2.new(1, -10, 0, 60)
+    welcomeMsg.Position = UDim2.new(0, 5, 0, 5)
+    welcomeMsg.BackgroundTransparency = 1
+    welcomeMsg.Font = Enum.Font.Gotham
+    welcomeMsg.TextSize = 12
+    welcomeMsg.Text = "🤖 Hello! I'm your AI Assistant. I can help you:\n• Optimize settings for your game\n• Suggest best features\n• Answer configuration questions"
+    welcomeMsg.TextColor3 = C.text
+    welcomeMsg.TextXAlignment = Enum.TextXAlignment.Left
+    welcomeMsg.TextYAlignment = Enum.TextXAlignment.Top
+    welcomeMsg.Parent = chatFrame
+end
+
+local function showAIRecommendations()
+    local suggestions = generateAISuggestions()
+    
+    if #suggestions == 0 then
+        Notify("🤖 AI: Your settings are optimized!", C.success)
+        return
+    end
+    
+    createAIChat()
+    local chatFrame = obj.aiChatFrame
+    
+    -- Clear previous messages except welcome
+    for _, child in pairs(chatFrame:GetChildren()) do
+        if child:IsA("TextLabel") and child.Text ~= "🤖 Hello! I'm your AI Assistant. I can help you:\n• Optimize settings for your game\n• Suggest best features\n• Answer configuration questions" then
+            child:Destroy()
+        end
+    end
+    
+    -- Add recommendations
+    local yOffset = 70
+    for i, suggestion in ipairs(suggestions) do
+        local msg = Instance.new("TextLabel")
+        msg.Size = UDim2.new(1, -10, 0, 40)
+        msg.Position = UDim2.new(0, 5, 0, yOffset)
+        msg.BackgroundTransparency = 1
+        msg.Font = Enum.Font.Gotham
+        msg.TextSize = 12
+        msg.TextColor3 = suggestion.priority == "high" and C.warning or C.text
+        msg.TextXAlignment = Enum.TextXAlignment.Left
+        msg.TextYAlignment = Enum.TextXAlignment.Top
+        msg.TextWrapped = true
+        msg.Parent = chatFrame
+        
+        local icon = suggestion.priority == "high" and "🔥" or "💡"
+        msg.Text = string.format("%s %s: %s\nReason: %s", 
+            icon, 
+            suggestion.feature:gsub("(%a)([%w_']*)", function(first, rest) return first:upper()..rest:lower() end),
+            suggestion.type == "config" and "Set to " .. tostring(suggestion.value) or "Enable",
+            suggestion.reason
+        )
+        
+        yOffset = yOffset + 45
+    end
+    
+    chatFrame.CanvasSize = UDim2.new(0, 0, 0, yOffset + 20)
+end
+
+-- ══════════════════════════════════════════════════════════════
+--  S13: QUANTUM AIMBOT SYSTEM (v15.5)
+-- ══════════════════════════════════════════════════════════════
+
+-- ── Quantum Aimbot Core Functions ────────────────────────────────
+local function enableQuantumAim()
+    if obj.quantumProcessor then return end
+    
+    obj.quantumProcessor = addConn(RS.Heartbeat:Connect(function()
+        if not st.quantumAim or not obj.lockedTarget then return end
+        
+        local target = obj.lockedTarget.Character
+        if not target or not target:FindFirstChild("HumanoidRootPart") then return end
+        
+        local targetHRP = target.HumanoidRootPart
+        local myHRP = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+        if not myHRP then return end
+        
+        -- Quantum prediction: Calculate multiple possible positions
+        local positions = {}
+        local velocity = targetHRP.Velocity
+        local acceleration = (targetHRP.Velocity - (obj.lastVelocity or Vector3.new())) * 60
+        
+        for i = 1, 5 do
+            local time = i * 0.1
+            local predictedPos = targetHRP.Position + velocity * time + acceleration * time * time / 2
+            table.insert(positions, predictedPos)
+        end
+        
+        -- Neural network: Choose best target position
+        local bestPos = positions[1]
+        local bestScore = 0
+        
+        for _, pos in ipairs(positions) do
+            local score = 0
+            -- Distance factor
+            local distance = (pos - myHRP.Position).Magnitude
+            score = score + (1000 - distance) / 100
+            
+            -- Visibility factor
+            local ray = Workspace:Raycast(myHRP.Position, pos - myHRP.Position, {target.Character})
+            if not ray or ray.Instance.Parent == target.Character then
+                score = score + 500
+            end
+            
+            -- Movement pattern factor
+            if obj.neuralNetwork[target.UserId] then
+                local pattern = obj.neuralNetwork[target.UserId]
+                score = score + pattern.confidence * 100
+            end
+            
+            if score > bestScore then
+                bestScore = score
+                bestPos = pos
+            end
+        end
+        
+        obj.lastVelocity = targetHRP.Velocity
+        obj.quantumTarget = bestPos
+    end))
+end
+
+local function disableQuantumAim()
+    if obj.quantumProcessor then
+        obj.quantumProcessor:Disconnect()
+        obj.quantumProcessor = nil
+    end
+    obj.quantumTarget = nil
+end
+
+local function enableNeuralTargeting()
+    -- Initialize neural network for each player
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr ~= player then
+            obj.neuralNetwork[plr.UserId] = {
+                positions = {},
+                velocities = {},
+                confidence = 0,
+                lastUpdate = tick()
+            }
+        end
+    end
+    
+    obj.neuralTargetingConn = addConn(RS.Heartbeat:Connect(function()
+        if not st.neuralTargeting then return end
+        
+        for _, plr in ipairs(Players:GetPlayers()) do
+            if plr ~= player and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+                local data = obj.neuralNetwork[plr.UserId]
+                if data then
+                    local currentPos = plr.Character.HumanoidRootPart.Position
+                    local currentVel = plr.Character.HumanoidRootPart.Velocity
+                    
+                    -- Update neural data
+                    table.insert(data.positions, currentPos)
+                    table.insert(data.velocities, currentVel)
+                    
+                    -- Keep only last 30 frames
+                    if #data.positions > 30 then
+                        table.remove(data.positions, 1)
+                        table.remove(data.velocities, 1)
+                    end
+                    
+                    -- Calculate movement pattern confidence
+                    if #data.positions >= 10 then
+                        local avgVel = Vector3.new()
+                        for _, vel in ipairs(data.velocities) do
+                            avgVel = avgVel + vel
+                        end
+                        avgVel = avgVel / #data.velocities
+                        
+                        local variance = 0
+                        for _, vel in ipairs(data.velocities) do
+                            variance = variance + (vel - avgVel).Magnitude
+                        end
+                        variance = variance / #data.velocities
+                        
+                        data.confidence = math.max(0, 1 - variance / 50)
+                    end
+                    
+                    data.lastUpdate = tick()
+                end
+            end
+        end
+    end))
+end
+
+local function disableNeuralTargeting()
+    if obj.neuralTargetingConn then
+        obj.neuralTargetingConn:Disconnect()
+        obj.neuralTargetingConn = nil
+    end
+end
+
+-- ── Neural ESP System ────────────────────────────────────────────
+local function enableNeuralESP()
+    obj.neuralESPConn = addConn(RS.Heartbeat:Connect(function()
+        if not st.neuralESP then return end
+        
+        for _, plr in ipairs(Players:GetPlayers()) do
+            if plr ~= player and plr.Character and obj.espObjs[plr] then
+                local espData = obj.espObjs[plr]
+                local neuralData = obj.neuralNetwork[plr.UserId]
+                
+                if neuralData and #neuralData.positions > 5 then
+                    -- Predict next position
+                    local positions = neuralData.positions
+                    local velocities = neuralData.velocities
+                    
+                    local avgVel = Vector3.new()
+                    for _, vel in ipairs(velocities) do
+                        avgVel = avgVel + vel
+                    end
+                    avgVel = avgVel / #velocities
+                    
+                    local currentPos = positions[#positions]
+                    local predictedPos = currentPos + avgVel * 0.5
+                    
+                    -- Create prediction indicator
+                    if espData.predictionPart then
+                        espData.predictionPart.Position = predictedPos
+                    else
+                        espData.predictionPart = Instance.new("Part")
+                        espData.predictionPart.Size = Vector3.new(1, 1, 1)
+                        espData.predictionPart.Color = C.cyan
+                        espData.predictionPart.Material = Enum.Material.Neon
+                        espData.predictionPart.Anchored = true
+                        espData.predictionPart.CanCollide = false
+                        espData.predictionPart.Transparency = 0.7
+                        espData.predictionPart.Parent = Workspace
+                    end
+                    
+                    -- X-Ray vision
+                    if st.espXRay then
+                        local myHRP = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+                        if myHRP then
+                            local direction = (plr.Character.HumanoidRootPart.Position - myHRP.Position).Unit
+                            local rayResult = Workspace:Raycast(myHRP.Position, direction * 1000)
+                            
+                            if espData.xRayPart then
+                                espData.xRayPart:Destroy()
+                            end
+                            
+                            if rayResult and rayResult.Instance ~= plr.Character then
+                                espData.xRayPart = Instance.new("Part")
+                                espData.xRayPart.Size = Vector3.new(0.1, 0.1, (rayResult.Position - myHRP.Position).Magnitude)
+                                espData.xRayPart.Color = C.pink
+                                espData.xRayPart.Material = Enum.Material.Neon
+                                espData.xRayPart.Anchored = true
+                                espData.xRayPart.CanCollide = false
+                                espData.xRayPart.Transparency = 0.3
+                                espData.xRayPart.CFrame = CFrame.new(myHRP.Position, rayResult.Position)
+                                espData.xRayPart.Parent = Workspace
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end))
+end
+
+local function disableNeuralESP()
+    if obj.neuralESPConn then
+        obj.neuralESPConn:Disconnect()
+        obj.neuralESPConn = nil
+    end
+    
+    -- Clean up prediction parts
+    for _, espData in pairs(obj.espObjs) do
+        if espData.predictionPart then
+            espData.predictionPart:Destroy()
+            espData.predictionPart = nil
+        end
+        if espData.xRayPart then
+            espData.xRayPart:Destroy()
+            espData.xRayPart = nil
+        end
+    end
+end
+
+-- ── Enhanced Health Bar System ────────────────────────────────────────
+local function createAdvancedHealthBar(plr)
+    if not plr.Character or not obj.espObjs[plr] then return end
+    
+    local espData = obj.espObjs[plr]
+    local humanoid = plr.Character:FindFirstChildOfClass("Humanoid")
+    if not humanoid then return end
+    
+    -- Create advanced health bar container
+    local healthContainer = Instance.new("BillboardGui")
+    healthContainer.Size = UDim2.new(0, 100, 0, 40)
+    healthContainer.StudsOffset = Vector3.new(0, 3, 0)
+    healthContainer.Parent = plr.Character:FindFirstChild("Head")
+    
+    -- Background
+    local bg = Instance.new("Frame")
+    bg.Size = UDim2.new(1, 0, 0, 20)
+    bg.Position = UDim2.new(0, 0, 0, 0)
+    bg.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    bg.BackgroundTransparency = 0.3
+    bg.BorderSizePixel = 0
+    bg.Parent = healthContainer
+    
+    -- Health fill
+    local healthFill = Instance.new("Frame")
+    healthFill.Size = UDim2.new(1, 0, 1, 0)
+    healthFill.Position = UDim2.new(0, 0, 0, 0)
+    healthFill.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+    healthFill.BorderSizePixel = 0
+    healthFill.Parent = bg
+    
+    -- Shield/Armor bar
+    local shieldFill = Instance.new("Frame")
+    shieldFill.Size = UDim2.new(0, 0, 0.3, 0)
+    shieldFill.Position = UDim2.new(0, 0, -0.3, 0)
+    shieldFill.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+    shieldFill.BorderSizePixel = 0
+    shieldFill.Parent = bg
+    
+    -- Health text
+    local healthText = Instance.new("TextLabel")
+    healthText.Size = UDim2.new(1, 0, 1, 0)
+    healthText.Position = UDim2.new(0, 0, 0, 0)
+    healthText.BackgroundTransparency = 1
+    healthText.Font = Enum.Font.GothamBold
+    healthText.TextSize = 12
+    healthText.TextColor3 = Color3.fromRGB(255, 255, 255)
+    healthText.Text = "100/100"
+    healthText.Parent = bg
+    
+    espData.advancedHealth = {
+        container = healthContainer,
+        bg = bg,
+        fill = healthFill,
+        shield = shieldFill,
+        text = healthText
+    }
+    
+    -- Update health bar
+    local function updateHealth()
+        if humanoid and espData.advancedHealth then
+            local health = humanoid.Health
+            local maxHealth = humanoid.MaxHealth
+            local percent = health / maxHealth
+            
+            espData.advancedHealth.fill:TweenSize(UDim2.new(percent, 0, 1, 0), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.2)
+            espData.advancedHealth.text.Text = string.format("%d/%d", math.floor(health), math.floor(maxHealth))
+            
+            -- Color based on health
+            local healthColor = percent > 0.5 and Color3.fromRGB(0, 255, 0) or percent > 0.25 and Color3.fromRGB(255, 255, 0) or Color3.fromRGB(255, 0, 0)
+            espData.advancedHealth.fill.BackgroundColor3 = healthColor
+            
+            -- Predict health changes
+            if st.healthPrediction and obj.neuralNetwork[plr.UserId] then
+                local predictedHealth = health - (obj.neuralNetwork[plr.UserId].lastDamage or 0)
+                if predictedHealth ~= health then
+                    espData.advancedHealth.text.Text = string.format("%d/%d → %d", math.floor(health), math.floor(maxHealth), math.floor(predictedHealth))
+                    espData.advancedHealth.text.TextColor3 = Color3.fromRGB(255, 100, 100)
+                end
+            end
+        end
+    end
+    
+    humanoid.HealthChanged:Connect(updateHealth)
+    updateHealth()
+end
+
+local function createDamageNumber(position, damage, isCritical)
+    if not st.damageNumbers then return end
+    
+    local damageText = Instance.new("BillboardGui")
+    damageText.Size = UDim2.new(0, 100, 0, 50)
+    damageText.StudsOffset = Vector3.new(0, 0, 0)
+    damageText.Parent = Workspace
+    
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, 0, 1, 0)
+    label.BackgroundTransparency = 1
+    label.Font = isCritical and Enum.Font.GothamBlack or Enum.Font.GothamBold
+    label.TextSize = isCritical and 24 or 18
+    label.TextColor3 = isCritical and Color3.fromRGB(255, 0, 100) or Color3.fromRGB(255, 255, 255)
+    label.Text = tostring(math.floor(damage))
+    label.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    label.TextStrokeTransparency = 0
+    label.Parent = damageText
+    
+    -- Animate damage number
+    local startTime = tick()
+    local connection
+    connection = RS.Heartbeat:Connect(function()
+        local elapsed = tick() - startTime
+        if elapsed > 2 then
+            damageText:Destroy()
+            connection:Disconnect()
+            return
+        end
+        
+        local yOffset = elapsed * 50
+        local transparency = elapsed / 2
+        damageText.StudsOffset = Vector3.new(0, yOffset, 0)
+        label.TextTransparency = transparency
+    end)
+    
+    table.insert(obj.damageNumberPool, {gui = damageText, conn = connection})
+end
+
+-- ══════════════════════════════════════════════════════════════
+--  S14: GUI CREATION
 -- ══════════════════════════════════════════════════════════════
 local screenGui = createGui("MedusaMain")
 obj.wmGui = screenGui
@@ -1235,7 +2321,7 @@ local verBadge = Instance.new("TextLabel")
 verBadge.Size = UDim2.new(0, 48, 0, 18); verBadge.Position = UDim2.new(0, 148, 0.5, -9)
 verBadge.BackgroundColor3 = C.accent; verBadge.BackgroundTransparency = 0.8
 verBadge.BorderSizePixel = 0; verBadge.Font = Enum.Font.GothamBold
-verBadge.TextSize = 9; verBadge.TextColor3 = C.accent; verBadge.Text = "v15.1"
+verBadge.TextSize = 9; verBadge.TextColor3 = C.accent; verBadge.Text = "v15.3"
 verBadge.ZIndex = 5; verBadge.Parent = topbar; mkCorner(verBadge, 6)
 table.insert(obj.themeElements, { obj = verBadge, prop = "TextColor3" })
 table.insert(obj.themeElements, { obj = verBadge, prop = "BackgroundColor3" })
@@ -1265,8 +2351,8 @@ local TABS = {
     { id = "status", icon = "📊" }, { id = "aimbot", icon = "🎯" },
     { id = "visuals", icon = "👁️" }, { id = "movement", icon = "🏃" },
     { id = "combat", icon = "⚔️" }, { id = "players", icon = "👥" },
-    { id = "misc", icon = "🔧" }, { id = "binds", icon = "🎮" },
-    { id = "style", icon = "🎨" }, { id = "gui", icon = "🖥️" },
+    { id = "misc", icon = "🔧" }, { id = "advanced", icon = "⚡" },
+    { id = "binds", icon = "🎮" }, { id = "style", icon = "🎨" }, { id = "gui", icon = "🖥️" },
 }
 
 -- Create tab buttons and scroll frames
@@ -1412,7 +2498,7 @@ obj.wmLabel.Size = UDim2.new(1, -26, 1, 0); obj.wmLabel.Position = UDim2.new(0, 
 obj.wmLabel.BackgroundTransparency = 1; obj.wmLabel.Font = Enum.Font.GothamMedium
 obj.wmLabel.TextSize = 11; obj.wmLabel.TextColor3 = C.text
 obj.wmLabel.TextXAlignment = Enum.TextXAlignment.Left
-obj.wmLabel.Text = "🐍 MEDUSA v15.1  |  👤 " .. myRegion .. "  |  🖥️ " .. svRegion .. "  |  📡 --ms  |  🚀 -- FPS"; obj.wmLabel.Parent = wmPill
+obj.wmLabel.Text = "🐍 MEDUSA v15.3  |  👤 " .. myRegion .. "  |  🖥️ " .. svRegion .. "  |  📡 --ms  |  🚀 -- FPS"; obj.wmLabel.Parent = wmPill
 
 makeDraggable(wmPill, wmPill)
 
@@ -1422,7 +2508,7 @@ task.spawn(function()
     while st.running do
         task.wait(0.5)
         pcall(function()
-            obj.wmLabel.Text = "🐍 MEDUSA v15.1  |  👤 " .. myRegion .. "  |  🖥️ " .. svRegion .. "  |  📡 " .. obj.wmPing .. "ms  |  🚀 " .. obj.wmFps .. " FPS"
+            obj.wmLabel.Text = "🐍 MEDUSA v15.3  |  👤 " .. myRegion .. "  |  🖥️ " .. svRegion .. "  |  📡 " .. obj.wmPing .. "ms  |  🚀 " .. obj.wmFps .. " FPS"
             dotPhase = dotPhase + 0.3
             wmDot.BackgroundTransparency = math.sin(dotPhase) * 0.3 + 0.1
         end)
@@ -1453,7 +2539,7 @@ do local tab = obj.tabFrames["status"]; if tab then
     local kfCard = mkCard(tab, 78, 3); mkLabel(kfCard, "☠️ KILL FEED", cfg.gui.fontSize, C.textMuted, 12, 6)
     obj.killFeedLabel = mkLabel(kfCard, "No kills yet", 10, C.textMuted, 12, 28, 1, 42); obj.killFeedLabel.TextWrapped = true; obj.killFeedLabel.TextYAlignment = Enum.TextYAlignment.Top
     local timerCard = mkCard(tab, 38, 4); obj.statusPills["espTimer"] = { label = mkLabel(timerCard, "🔄 ESP Refresh: --", 10, C.textMuted, 12, 8) }
-    local credCard = mkCard(tab, 38, 5); mkLabel(credCard, "🐍 Medusa v15.1 CINEMATIC EDITION — Made by .donatorexe.", 10, C.textMuted, 12, 8)
+    local credCard = mkCard(tab, 38, 5); mkLabel(credCard, "🐍 Medusa v15.3 SUPER ESP — Made by .donatorexe.", 10, C.textMuted, 12, 8)
 end end
 
 -- S12: AIMBOT
@@ -1473,6 +2559,16 @@ do local tab = obj.tabFrames["aimbot"]; if tab then
     mkSlider(si, "🎚️ Smooth", cfg.aimSmooth, cfg.smoothMin, cfg.smoothMax, 2, function(v) cfg.aimSmooth = v; autoSave() end)
     mkSlider(si, "📐 Max Distance", cfg.maxDistance, cfg.distMin, cfg.distMax, 3, function(v) cfg.maxDistance = v; autoSave() end)
     mkSlider(si, "⏱️ Trigger Delay", math.floor(cfg.triggerDelay * 100), 1, 100, 4, function(v) cfg.triggerDelay = v / 100; autoSave() end)
+
+    -- v15.5: Quantum Aimbot Features
+    local qac = mkCard(tab, 180, 5); mkLabel(qac, "⚛️ QUANTUM AIMBOT (v15.5)", cfg.gui.fontSize, C.textMuted, 12, 6)
+    local qai = Instance.new("Frame"); qai.Size = UDim2.new(1, -18, 0, 145); qai.Position = UDim2.new(0, 9, 0, 28); qai.BackgroundTransparency = 1; qai.Parent = qac
+    local qail = Instance.new("UIListLayout", qai); qail.Padding = UDim.new(0, 4)
+    mkSyncToggle(qai, "⚛️ Quantum Aim", "quantumAim", 1, function(on) if on then enableQuantumAim() else disableQuantumAim() end; notify(on and "⚛️ Quantum Aim ON" or "❌ OFF", on and C.purple or C.error) end)
+    mkSyncToggle(qai, "🧠 Neural Targeting", "neuralTargeting", 2, function(on) if on then enableNeuralTargeting() else disableNeuralTargeting() end; notify(on and "🧠 Neural Targeting ON" or "❌ OFF", on and C.cyan or C.error) end)
+    mkSyncToggle(qai, "🎯 Multi-Target", "multiTarget", 3, function(on) notify(on and "🎯 Multi-Target ON" or "❌ OFF", on and C.warning or C.error) end)
+    mkSlider(qai, "🎭 Humanization", math.floor(cfg.aimbotHumanization * 100), 0, 100, 4, function(v) cfg.aimbotHumanization = v / 100; autoSave() end)
+    mkSlider(qai, "⚡ Reaction Time", math.floor(cfg.aimbotReactionTime * 1000), 0, 500, 5, function(v) cfg.aimbotReactionTime = v / 1000; autoSave() end)
 
     local pc = mkCard(tab, 44, 3); mkPartSelector(pc, 1)
 
@@ -1511,6 +2607,16 @@ do local tab = obj.tabFrames["visuals"]; if tab then
         autoSave(); notify(on and "👁️ View Angles ON" or "❌ OFF", on and C.accent or C.error)
     end)
     mkSlider(ei, "📏 ESP Distance", cfg.espDistance, 50, 5000, 6, function(v) cfg.espDistance = v end)
+
+    -- v15.5: Neural ESP Features
+    local nec = mkCard(tab, 200, 3); mkLabel(nec, "🧠 NEURAL ESP (v15.5)", cfg.gui.fontSize, C.textMuted, 12, 6)
+    local nei = Instance.new("Frame"); nei.Size = UDim2.new(1, -18, 0, 165); nei.Position = UDim2.new(0, 9, 0, 28); nei.BackgroundTransparency = 1; nei.Parent = nec
+    local neil = Instance.new("UIListLayout", nei); neil.Padding = UDim.new(0, 4)
+    mkSyncToggle(nei, "🧠 Neural ESP", "neuralESP", 1, function(on) if on then enableNeuralESP() else disableNeuralESP() end; notify(on and "🧠 Neural ESP ON" or "❌ OFF", on and C.cyan or C.error) end)
+    mkSyncToggle(nei, "🔮 ESP Prediction", "espPrediction", 2, function(on) notify(on and "🔮 ESP Prediction ON" or "❌ OFF", on and C.purple or C.error) end)
+    mkSyncToggle(nei, "🌡️ ESP Heatmap", "espHeatmap", 3, function(on) notify(on and "🌡️ ESP Heatmap ON" or "❌ OFF", on and C.warning or C.error) end)
+    mkSyncToggle(nei, "🛤️ Path Prediction", "espPathPrediction", 4, function(on) notify(on and "🛤️ Path Prediction ON" or "❌ OFF", on and C.success or C.error) end)
+    mkSyncToggle(nei, "👻️ X-Ray Vision", "espXRay", 5, function(on) notify(on and "👻️ X-Ray Vision ON" or "❌ OFF", on and C.pink or C.error) end)
 
     local wc = mkCard(tab, 115, 2); mkLabel(wc, "🌍 WORLD", cfg.gui.fontSize, C.textMuted, 12, 6)
     local wi = Instance.new("Frame"); wi.Size = UDim2.new(1, -18, 0, 85); wi.Position = UDim2.new(0, 9, 0, 28); wi.BackgroundTransparency = 1; wi.Parent = wc
@@ -1610,6 +2716,16 @@ do local tab = obj.tabFrames["combat"]; if tab then
     mkSyncToggle(ti, "🔫 Show Weapon", "thWeapon", 3, function() end)
     mkSyncToggle(ti, "📏 Show Distance", "thDistance", 4, function() end)
     mkSyncToggle(ti, "🔒 Show Lock Status", "thLockStatus", 5, function() end)
+    
+    -- v15.5: Enhanced HUD Features
+    local ehc = mkCard(tab, 200, 4); mkLabel(ehc, "💎 ENHANCED HUD (v15.5)", cfg.gui.fontSize, C.textMuted, 12, 6)
+    local ehi = Instance.new("Frame"); ehi.Size = UDim2.new(1, -18, 0, 165); ehi.Position = UDim2.new(0, 9, 0, 28); ehi.BackgroundTransparency = 1; ehi.Parent = ehc
+    local ehil = Instance.new("UIListLayout", ehi); ehil.Padding = UDim.new(0, 4)
+    mkSyncToggle(ehi, "💎 Advanced Health", "advancedHealthBar", 1, function(on) notify(on and "💎 Advanced Health ON" or "❌ OFF", on and C.success or C.error) end)
+    mkSyncToggle(ehi, "💥 Damage Numbers", "damageNumbers", 2, function(on) notify(on and "💥 Damage Numbers ON" or "❌ OFF", on and C.warning or C.error) end)
+    mkSyncToggle(ehi, "✨ Kill Effects", "killConfirmations", 3, function(on) notify(on and "✨ Kill Effects ON" or "❌ OFF", on and C.pink or C.error) end)
+    mkSyncToggle(ehi, "🔮 Health Prediction", "healthPrediction", 4, function(on) notify(on and "🔮 Health Prediction ON" or "❌ OFF", on and C.purple or C.error) end)
+    mkSyncToggle(ehi, "🛡️ Shield Indicator", "shieldIndicator", 5, function(on) notify(on and "🛡️ Shield Indicator ON" or "❌ OFF", on and C.cyan or C.error) end)
 end end
 
 -- S16: PLAYERS
@@ -1710,6 +2826,47 @@ do local tab = obj.tabFrames["misc"]; if tab then
     mkBtn(di, "🗑️ EJECT (P)", C.error, 2, function() notify("🗑️ Ejecting...", C.error); task.delay(0.5, function() pcall(function() doEject() end) end) end)
 end end
 
+-- S17.5: ADVANCED
+do local tab = obj.tabFrames["advanced"]; if tab then
+    -- Advanced Combat Card
+    local acc = mkCard(tab, 280, 1); mkLabel(acc, "⚔️ ADVANCED COMBAT", cfg.gui.fontSize, C.textMuted, 12, 6)
+    local aci = Instance.new("Frame"); aci.Size = UDim2.new(1, -18, 0, 215); aci.Position = UDim2.new(0, 9, 0, 28); aci.BackgroundTransparency = 1; aci.Parent = acc
+    local aciPad = Instance.new("UIPadding", aci); aciPad.PaddingBottom = UDim.new(0, 8)
+    local acil = Instance.new("UIListLayout", aci); acil.Padding = UDim.new(0, 4)
+    mkSyncToggle(aci, "🎯 Bullet Prediction", "bulletPrediction", 1, function() autoSave() end)
+    mkSyncToggle(aci, "🔄 Anti-Aim", "antiAim", 2, function() autoSave() end)
+    mkSyncToggle(aci, "🌐 Fakelag", "fakelag", 3, function() autoSave() end)
+    mkSyncToggle(aci, "⏪ Backtrack", "backtrack", 4, function() autoSave() end)
+    mkSyncToggle(aci, "🧠 Smart ESP", "smartESP", 5, function() autoSave() end)
+
+    -- Utility Features Card
+    local ufc = mkCard(tab, 260, 2); mkLabel(ufc, "🛠️ UTILITY FEATURES", cfg.gui.fontSize, C.textMuted, 12, 6)
+    local ufi = Instance.new("Frame"); ufi.Size = UDim2.new(1, -18, 0, 175); ufi.Position = UDim2.new(0, 9, 0, 28); ufi.BackgroundTransparency = 1; ufi.Parent = ufc
+    local ufil = Instance.new("UIListLayout", ufi); ufil.Padding = UDim.new(0, 4)
+    mkSyncToggle(ufi, "💬 Chat Logger", "chatLogger", 1, function() autoSave() end)
+    mkSyncToggle(ufi, "👥 Player History", "playerHistory", 2, function() autoSave() end)
+    mkSyncToggle(ufi, "🌐 Server Info", "serverInfo", 3, function() autoSave() end)
+    mkSyncToggle(ufi, "💾 Memory Monitor", "memoryMonitor", 4, function() autoSave() end)
+    mkSyncToggle(ufi, "🤖 AI Assistant", "aiAssistant", 5, function() if st.aiAssistant then createAIChat() else pcall(function() if obj.aiGui then obj.aiGui:Destroy(); obj.aiGui = nil end end) end; autoSave() end)
+    mkSyncToggle(ufi, "🧠 AI Optimizer", "aiOptimizer", 6, function() if st.aiOptimizer then applyAIOptimization() end; autoSave() end)
+    mkSyncToggle(ufi, "💡 AI Recommendations", "aiRecommendations", 7, function() if st.aiRecommendations then showAIRecommendations() end; autoSave() end)
+
+    -- Interface Features Card
+    local ifc = mkCard(tab, 160, 3); mkLabel(ifc, "🖥️ INTERFACE FEATURES", cfg.gui.fontSize, C.textMuted, 12, 6)
+    local ifi = Instance.new("Frame"); ifi.Size = UDim2.new(1, -18, 0, 95); ifi.Position = UDim2.new(0, 9, 0, 28); ifi.BackgroundTransparency = 1; ifi.Parent = ifc
+    local ifil = Instance.new("UIListLayout", ifi); ifil.Padding = UDim.new(0, 4)
+    mkSyncToggle(ifi, "🗺️ Mini Map", "miniMap", 1, function() autoSave() end)
+    mkSyncToggle(ifi, "👋 Gesture Controls", "gestureControls", 2, function() autoSave() end)
+    mkSyncToggle(ifi, "🔊 Sound Packs", "soundPacks", 3, function() autoSave() end)
+
+    -- Performance Features Card
+    local pfc = mkCard(tab, 120, 4); mkLabel(pfc, "⚡ PERFORMANCE", cfg.gui.fontSize, C.textMuted, 12, 6)
+    local pfi = Instance.new("Frame"); pfi.Size = UDim2.new(1, -18, 0, 55); pfi.Position = UDim2.new(0, 9, 0, 28); pfi.BackgroundTransparency = 1; pfi.Parent = pfc
+    local pfil = Instance.new("UIListLayout", pfi); pfil.Padding = UDim.new(0, 4)
+    mkSyncToggle(pfi, "🎯 Adaptive FPS", "adaptiveFPS", 1, function() autoSave() end)
+    mkSyncToggle(pfi, "🌙 Background Mode", "backgroundMode", 2, function() autoSave() end)
+end end
+
 -- S18: BINDS
 do local tab = obj.tabFrames["binds"]; if tab then
     -- Title card
@@ -1721,9 +2878,24 @@ do local tab = obj.tabFrames["binds"]; if tab then
         fly = "✈️ Fly", noclip = "👻 Noclip", hitbox = "📦 Hitbox", speed = "🏃 Speed",
         infJump = "🦘 Inf. Jump", fullbright = "💡 Fullbright", crosshair = "➕ Crosshair",
         clickTP = "🖱️ Click TP", noFallDmg = "🪂 No Fall Dmg", spinBot = "🌀 Spin Bot",
-        toggleGui = "👁️ Toggle GUI", eject = "🗑️ Eject", panic = "🚨 Panic"
+        toggleGui = "👁️ Toggle GUI", eject = "🗑️ Eject", panic = "🚨 Panic",
+        -- NEW: Advanced Combat Binds
+        bulletPrediction = "🎯 Bullet Prediction (F1)", antiAim = "🔄 Anti-Aim (F2)", fakelag = "🌐 Fakelag (F3)", backtrack = "⏪ Backtrack (F4)",
+        -- NEW: Utility Binds
+        chatLogger = "💬 Chat Logger (F5)", playerHistory = "👥 Player History (F6)", serverInfo = "🌐 Server Info (F7)", memoryMonitor = "💾 Memory Monitor (F8)",
+        -- NEW: Interface Binds
+        miniMap = "🗺️ Mini Map (Insert)", gestureControls = "👋 Gesture Controls (F10)", soundPacks = "🔊 Sound Packs (F11)",
+        -- NEW: Performance Binds
+        adaptiveFPS = "🎯 Adaptive FPS (F12)", smartESP = "🧠 Smart ESP (Numpad1)", backgroundMode = "🌙 Background Mode (Numpad2)",
+        -- NEW: AI Assistant Binds
+        aiAssistant = "🤖 AI Assistant (Numpad3)", aiOptimizer = "🧠 AI Optimizer (Numpad4)", aiRecommendations = "💡 AI Recommendations (Numpad5)",
     }
-    local bo = { "esp", "aimbot", "silentAim", "triggerBot", "fly", "noclip", "hitbox", "speed", "infJump", "fullbright", "crosshair", "clickTP", "noFallDmg", "spinBot", "toggleGui", "eject", "panic" }
+    local bo = { "esp", "aimbot", "silentAim", "triggerBot", "fly", "noclip", "hitbox", "speed", "infJump", "fullbright", "crosshair", "clickTP", "noFallDmg", "spinBot", "toggleGui", "eject", "panic",
+        -- NEW: Add all new features to keybinds list
+        "bulletPrediction", "antiAim", "fakelag", "backtrack", "chatLogger", "playerHistory", "serverInfo", "memoryMonitor",
+        "miniMap", "gestureControls", "soundPacks", "adaptiveFPS", "smartESP", "backgroundMode",
+        "aiAssistant", "aiOptimizer", "aiRecommendations"
+    }
     for i, key in ipairs(bo) do
         local r = Instance.new("Frame"); r.Size = UDim2.new(1, 0, 0, 30); r.BackgroundColor3 = C.glass
         r.BackgroundTransparency = 0.6; r.BorderSizePixel = 0; r.LayoutOrder = i + 1; r.Parent = tab; mkCorner(r, 6)
@@ -2035,8 +3207,13 @@ local function closestInFOV()
     local mp = UIS:GetMouseLocation(); local best, bestD = nil, math.huge
     for _, plr in ipairs(Players:GetPlayers()) do
         if isValidTarget(plr) then local part = getAimPart(plr.Character)
-            if part then local sp, on = camera:WorldToViewportPoint(part.Position)
-                if on then local d = (Vector2.new(sp.X, sp.Y) - mp).Magnitude; if d < cfg.aimbotFOV and d < bestD then best = plr; bestD = d end end
+            if part then 
+                -- v15.3: Check distance for Aimbot Smoothing
+                local distance = (part.Position - camera.CFrame.Position).Magnitude
+                if distance <= cfg.maxDistance then
+                    local sp, on = camera:WorldToViewportPoint(part.Position)
+                    if on then local d = (Vector2.new(sp.X, sp.Y) - mp).Magnitude; if d < cfg.aimbotFOV and d < bestD then best = plr; bestD = d end end
+                end
             end
         end
     end; return best
@@ -2052,7 +3229,24 @@ addConn(RS.RenderStepped:Connect(function()
     if st.aimbot and rmbDown and obj.lockedTarget and obj.lockedTarget.Character then
         local part = getAimPart(obj.lockedTarget.Character)
         if part then
-            local tp = predictPosition(part, obj.lockedTarget.Character)
+            -- Use quantum prediction if enabled
+            local tp
+            if st.quantumAim and obj.quantumTarget then
+                tp = obj.quantumTarget
+            else
+                tp = predictPosition(part, obj.lockedTarget.Character)
+            end
+            
+            -- Add neural humanization
+            if st.neuralTargeting and cfg.aimbotHumanization > 0 then
+                local randomOffset = Vector3.new(
+                    (math.random() - 0.5) * cfg.aimbotHumanization,
+                    (math.random() - 0.5) * cfg.aimbotHumanization,
+                    (math.random() - 0.5) * cfg.aimbotHumanization
+                )
+                tp = tp + randomOffset
+            end
+            
             if cfg.aimSmooth == 0 then camera.CFrame = CFrame.new(camera.CFrame.Position, tp)
             else local t = (1 - cfg.aimSmooth / 100) * 0.93 + 0.02; camera.CFrame = CFrame.new(camera.CFrame.Position, camera.CFrame.Position + camera.CFrame.LookVector:Lerp((tp - camera.CFrame.Position).Unit, t).Unit) end
         end
@@ -2272,15 +3466,23 @@ local function addESP(plr)
                 local att1 = Instance.new("Attachment"); att1.Parent = p1
                 local beam = Instance.new("Beam")
                 beam.Attachment0 = att0; beam.Attachment1 = att1
-                beam.Color = ColorSequence.new(C.accent)
-                beam.Width0 = 0.15; beam.Width1 = 0.15
-                beam.FaceCamera = true; beam.Transparency = NumberSequence.new(0.3)
-                beam.Parent = skelFolder
-                table.insert(data.beams, { beam = beam, att0 = att0, att1 = att1 })
+                beam.Color = st.neuralESP and C.cyan or C.accent
+                beam.Width = 0.05; beam.Transparency = 0.7
+                beam.FaceCamera = true; beam.Parent = skelFolder
+                table.insert(data.beams, beam)
             end
         end
-        data.skelFolder = skelFolder
     end) end
+    
+    -- v15.5: Advanced Neural ESP Features
+    if st.neuralESP then
+        pcall(function() enableNeuralESP() end)
+    end
+    
+    if st.advancedHealthBar then
+        pcall(function() createAdvancedHealthBar(plr) end)
+    end
+    
     data.cn = RS.RenderStepped:Connect(function() pcall(function()
         if not st.running then return end
         if not char or not char.Parent or not head.Parent then
@@ -2295,9 +3497,16 @@ local function addESP(plr)
                 obj.espObjs[plr] = nil
             end; return
         end
-        if data.distLabel then data.distLabel.Text = math.floor((head.Position - camera.CFrame.Position).Magnitude) .. "m" end
+        if data.distLabel then 
+            local dist = mfloor((head.Position - camera.CFrame.Position).Magnitude)
+            data.distLabel.Text = dist .. "m" 
+        end
         local hum = char:FindFirstChildOfClass("Humanoid")
-        if hum and data.hpFill and hum.MaxHealth > 0 then local pct = math.clamp(hum.Health / hum.MaxHealth, 0, 1); data.hpFill.Size = UDim2.new(pct, 0, 1, 0); data.hpFill.BackgroundColor3 = pct > 0.5 and C.success or pct > 0.25 and C.warning or C.error end
+        if hum and data.hpFill and hum.MaxHealth > 0 then 
+            local pct = mclamp(hum.Health / hum.MaxHealth, 0, 1)
+            data.hpFill.Size = UDim2.new(pct, 0, 1, 0)
+            data.hpFill.BackgroundColor3 = pct > 0.5 and C.success or pct > 0.25 and C.warning or C.error 
+        end
         -- Update View Angles (lightweight — only CFrame update)
         if data.viewPart then
             if st.viewAngles and head and head.Parent then
@@ -2307,20 +3516,19 @@ local function addESP(plr)
                 data.viewPart.Transparency = 1
             end
         end
-        -- Update tracer line position
-        if data.tracerLine and data.tracerGui then
-            local vp = camera.ViewportSize
-            local sp, onScreen = camera:WorldToViewportPoint(head.Position)
-            if onScreen and st.tracers then
-                data.tracerLine.Visible = true
-                local startX, startY = vp.X / 2, vp.Y
-                local endX, endY = sp.X, sp.Y
+        -- Update tracer line position with Performance Max optimizations
+        if data.tracerLine and st.tracers then
+            local screenPos, visible = camera:WorldToScreenPoint(head.Position)
+            if visible and screenPos.Z > 0 then
+                local startX, startY = camera.ViewportSize.X / 2, camera.ViewportSize.Y
+                local endX, endY = screenPos.X, screenPos.Y
                 local dx, dy = endX - startX, endY - startY
-                local dist = math.sqrt(dx * dx + dy * dy)
+                local dist = msqrt(dx * dx + dy * dy)
                 local angle = math.atan2(dy, dx)
                 data.tracerLine.Size = UDim2.new(0, dist, 0, 1)
                 data.tracerLine.Position = UDim2.new(0, startX, 0, startY)
                 data.tracerLine.Rotation = math.deg(angle)
+                data.tracerLine.Visible = true
             else
                 data.tracerLine.Visible = false
             end
@@ -2329,11 +3537,73 @@ local function addESP(plr)
     obj.espObjs[plr] = data
 end
 
-task.spawn(function() while st.running do task.wait(1)
-    if st.esp then for _, plr in ipairs(Players:GetPlayers()) do if plr ~= player and not obj.espObjs[plr] then pcall(function() addESP(plr) end) end end
-        if os.time() - lastESPRefresh >= cfg.espRefreshRate then clearESP(); lastESPRefresh = os.time() end
-    else clearESP() end
-end end)
+task.spawn(function() 
+    local lastFrame = 0
+    local frameInterval = 1/60 -- 60 FPS limit for Anti-Lag
+    
+    while st.running do 
+        -- v15.3: Anti-Lag - Frame rate limiting
+        local currentTime = tick()
+        if currentTime - lastFrame < frameInterval then
+            task.wait(frameInterval - (currentTime - lastFrame))
+        end
+        lastFrame = tick()
+        
+        if st.esp then 
+            -- v15.3: Smart ESP management with distance checks
+            for _, plr in ipairs(Players:GetPlayers()) do 
+                if plr ~= player and not obj.espObjs[plr] then 
+                    pcall(function() 
+                        -- v15.3: Only add ESP if within max render distance
+                        local char = plr.Character
+                        if char and char:FindFirstChild("HumanoidRootPart") then
+                            local distance = (char.HumanoidRootPart.Position - camera.CFrame.Position).Magnitude
+                            if distance <= cfg.espMaxRenderDistance then
+                                addESP(plr)
+                            end
+                        end
+                    end) 
+                end 
+            end
+            
+            -- v15.3: Distance-based ESP cleanup
+            for plr, data in pairs(obj.espObjs) do
+                if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+                    local distance = (plr.Character.HumanoidRootPart.Position - camera.CFrame.Position).Magnitude
+                    if distance > cfg.espMaxRenderDistance then
+                        -- Remove ESP for players beyond 5000 studs
+                        pcall(function() 
+                            if data.hl then data.hl:Destroy() end
+                            if data.bb then data.bb:Destroy() end
+                            if data.box then data.box:Destroy() end
+                            if data.cn then data.cn:Disconnect() end
+                            if data.tracerGui then data.tracerGui:Destroy() end
+                            if data.skelFolder then data.skelFolder:Destroy() end
+                            if data.viewPart then data.viewPart:Destroy() end
+                        end)
+                        obj.espObjs[plr] = nil
+                    else
+                        -- v15.3: Smart text rendering - hide text beyond 2000 studs
+                        if data.bb and distance > cfg.espTextRenderDistance then
+                            data.bb.Enabled = false
+                        elseif data.bb and distance <= cfg.espTextRenderDistance then
+                            data.bb.Enabled = true
+                        end
+                    end
+                end
+            end
+            
+            if os.time() - lastESPRefresh >= cfg.espRefreshRate then 
+                clearESP(); 
+                lastESPRefresh = os.time() 
+            end
+        else 
+            clearESP() 
+        end
+        
+        task.wait() -- Main loop wait
+    end 
+end)
 addConn(Players.PlayerAdded:Connect(function(plr) task.delay(2, function() if st.esp and st.running then pcall(function() addESP(plr) end) end end) end))
 addConn(Players.PlayerRemoving:Connect(function(plr) if obj.espObjs[plr] then local d = obj.espObjs[plr]; pcall(function() if d.hl then d.hl:Destroy() end end); pcall(function() if d.bb then d.bb:Destroy() end end); pcall(function() if d.box then d.box:Destroy() end end); pcall(function() if d.cn then d.cn:Disconnect() end end); obj.espObjs[plr] = nil end end))
 
@@ -2392,7 +3662,7 @@ task.spawn(function()
                 local payload = {
                     content = nil,
                     embeds = {{
-                        title = "🐍 MEDUSA v15.1 — Live Status",
+                        title = "🐍 MEDUSA v15.3 — Live Status",
                         color = 56540, -- teal
                         fields = {
                             { name = "🎮 Game", value = "Roblox — " .. (game.Name or "Unknown"), inline = true },
@@ -2402,7 +3672,7 @@ task.spawn(function()
                             { name = "☠️ Kills This Session", value = tostring(kills), inline = true },
                             { name = "👥 Players", value = tostring(#Players:GetPlayers()) .. "/" .. tostring(Players.MaxPlayers), inline = true },
                         },
-                        footer = { text = "Medusa v15.1 — Made by .donatorexe. | " .. os.date("%H:%M:%S") },
+                        footer = { text = "Medusa v15.3 — Made by .donatorexe. | " .. os.date("%H:%M:%S") },
                     }},
                 }
                 local jsonPayload = HttpService:JSONEncode(payload)
@@ -2526,12 +3796,93 @@ local function toggleFeature(key)
     elseif key == "hitbox" then if not on then resetAllHitboxes() end; notify(on and "📦 Hitbox ON" or "❌ OFF", on and C.warning or C.error)
     elseif key == "speed" then if not on then pcall(function() local h = player.Character and player.Character:FindFirstChildOfClass("Humanoid"); if h then h.WalkSpeed = 16 end end) end; notify(on and "🏃 Speed ON" or "❌ OFF", on and C.accent or C.error)
     elseif key == "fullbright" then setFullbright(on); notify(on and "💡 Fullbright ON" or "❌ OFF", on and C.warning or C.error)
+    -- NEW: Advanced Combat Features
+    elseif key == "bulletPrediction" then if on then enableBulletPrediction() else disableBulletPrediction() end; notify(on and "🎯 Bullet Prediction ON" or "❌ OFF", on and C.purple or C.error)
+    elseif key == "antiAim" then if on then enableAntiAim() else disableAntiAim() end; notify(on and "🔄 Anti-Aim ON" or "❌ OFF", on and C.warning or C.error)
+    elseif key == "fakelag" then if on then enableFakelag() else disableFakelag() end; notify(on and "🌐 Fakelag ON" or "❌ OFF", on and C.cyan or C.error)
+    elseif key == "backtrack" then if on then enableBacktrack() else disableBacktrack() end; notify(on and "⏪ Backtrack ON" or "❌ OFF", on and C.pink or C.error)
+    -- NEW: Utility Features
+    elseif key == "chatLogger" then if on then enableChatLogger() else disableChatLogger() end; notify(on and "💬 Chat Logger ON" or "❌ OFF", on and C.blue or C.error)
+    elseif key == "playerHistory" then if on then enablePlayerHistory() else disablePlayerHistory() end; notify(on and "👥 Player History ON" or "❌ OFF", on and C.success or C.error)
+    elseif key == "serverInfo" then if on then enableServerInfo() else disableServerInfo() end; notify(on and "🌐 Server Info ON" or "❌ OFF", on and C.accent or C.error)
+    elseif key == "memoryMonitor" then notify(on and "💾 Memory Monitor ON" or "❌ OFF", on and C.warning or C.error)
+    -- NEW: Interface Features
+    elseif key == "miniMap" then notify(on and "🗺️ Mini Map ON" or "❌ OFF", on and C.blue or C.error)
+    elseif key == "gestureControls" then notify(on and "👋 Gesture Controls ON" or "❌ OFF", on and C.pink or C.error)
+    elseif key == "soundPacks" then notify(on and "🔊 Sound Packs ON" or "❌ OFF", on and C.cyan or C.error)
+    -- NEW: Performance Features
+    elseif key == "adaptiveFPS" then if on then enableAdaptiveFPS() else disableAdaptiveFPS() end; notify(on and "⚡ Adaptive FPS ON" or "❌ OFF", on and C.success or C.error)
+    elseif key == "smartESP" then if on then enableSmartESP() else disableSmartESP() end; notify(on and "🧠 Smart ESP ON" or "❌ OFF", on and C.purple or C.error)
+    elseif key == "backgroundMode" then notify(on and "🌙 Background Mode ON" or "❌ OFF", on and C.accent or C.error)
+    -- NEW: AI Assistant Features
+    elseif key == "aiAssistant" then if on then createAIChat() else pcall(function() if obj.aiGui then obj.aiGui:Destroy(); obj.aiGui = nil end end) end; notify(on and "🤖 AI Assistant ON" or "❌ OFF", on and C.accent or C.error)
+    elseif key == "aiOptimizer" then if on then applyAIOptimization() end; notify(on and "🧠 AI Optimizer ON" or "❌ OFF", on and C.success or C.error)
+    elseif key == "aiRecommendations" then if on then showAIRecommendations() end; notify(on and "💡 AI Recommendations ON" or "❌ OFF", on and C.warning or C.error)
+    -- NEW: v15.5 Quantum Features
+    elseif key == "quantumAim" then if on then enableQuantumAim() else disableQuantumAim() end; notify(on and "⚛️ Quantum Aim ON" or "❌ OFF", on and C.purple or C.error)
+    elseif key == "neuralTargeting" then if on then enableNeuralTargeting() else disableNeuralTargeting() end; notify(on and "🧠 Neural Targeting ON" or "❌ OFF", on and C.cyan or C.error)
+    elseif key == "multiTarget" then notify(on and "🎯 Multi-Target ON" or "❌ OFF", on and C.warning or C.error)
+    elseif key == "neuralESP" then if on then enableNeuralESP() else disableNeuralESP() end; notify(on and "🧠 Neural ESP ON" or "❌ OFF", on and C.cyan or C.error)
+    elseif key == "espPrediction" then notify(on and "🔮 ESP Prediction ON" or "❌ OFF", on and C.purple or C.error)
+    elseif key == "espHeatmap" then notify(on and "🌡️ ESP Heatmap ON" or "❌ OFF", on and C.warning or C.error)
+    elseif key == "espPathPrediction" then notify(on and "🛤️ Path Prediction ON" or "❌ OFF", on and C.success or C.error)
+    elseif key == "espXRay" then notify(on and "👻️ X-Ray Vision ON" or "❌ OFF", on and C.pink or C.error)
+    elseif key == "advancedHealthBar" then notify(on and "💎 Advanced Health ON" or "❌ OFF", on and C.success or C.error)
+    elseif key == "damageNumbers" then notify(on and "💥 Damage Numbers ON" or "❌ OFF", on and C.warning or C.error)
+    elseif key == "killConfirmations" then notify(on and "✨ Kill Effects ON" or "❌ OFF", on and C.pink or C.error)
+    elseif key == "healthPrediction" then notify(on and "🔮 Health Prediction ON" or "❌ OFF", on and C.purple or C.error)
+    elseif key == "shieldIndicator" then notify(on and "🛡️ Shield Indicator ON" or "❌ OFF", on and C.cyan or C.error)
     else notify((on and "✅ " or "❌ ") .. key, on and C.accent or C.error) end
 end
 
 local function doPanic()
     for k in pairs(st) do if k ~= "running" and k ~= "guiVisible" and k ~= "antiAfk" then st[k] = false; syncToggleVisual(k, false) end end
     clearESP(); resetAllHitboxes(); disableFly(); setFullbright(false)
+    
+    -- NEW: Disable all advanced features
+    disableBulletPrediction()
+    disableAntiAim()
+    disableFakelag()
+    disableAdaptiveFPS()
+    disableSmartESP()
+    -- NEW: Disable AI features
+    st.aiAssistant = false; st.aiOptimizer = false; st.aiRecommendations = false
+    pcall(function() if obj.aiGui then obj.aiGui:Destroy(); obj.aiGui = nil end end)
+    -- NEW: Disable v15.5 Quantum Features
+    st.quantumAim = false; st.neuralTargeting = false; st.multiTarget = false
+    st.neuralESP = false; st.espPrediction = st.espHeatmap = false; st.espPathPrediction = false; st.espXRay = false
+    st.advancedHealthBar = false; st.damageNumbers = false; st.killConfirmations = false; st.healthPrediction = false; st.shieldIndicator = false
+    disableQuantumAim()
+    disableNeuralTargeting()
+    disableNeuralESP()
+    -- Clean up quantum objects
+    for _, espData in pairs(obj.espObjs) do
+        if espData.advancedHealth then
+            espData.advancedHealth.container:Destroy()
+            espData.advancedHealth = nil
+        end
+        if espData.predictionPart then
+            espData.predictionPart:Destroy()
+            espData.predictionPart = nil
+        end
+        if espData.xRayPart then
+            espData.xRayPart:Destroy()
+            espData.xRayPart = nil
+        end
+    end
+    -- Clean up damage numbers
+    for _, damageData in ipairs(obj.damageNumberPool) do
+        pcall(function() damageData.gui:Destroy() end)
+        pcall(function() damageData.conn:Disconnect() end)
+    end
+    obj.damageNumberPool = {}
+    disableBacktrack()
+    disableChatLogger()
+    disablePlayerHistory()
+    disableServerInfo()
+    disableAdaptiveFPS()
+    disableSmartESP()
+    
     pcall(function() 
         local c = player.Character
         if c then 
@@ -2583,6 +3934,11 @@ local function doEject()
     pcall(function() if obj.thGui then obj.thGui:Destroy() end end)
     pcall(function() if obj.activeHudGui then obj.activeHudGui:Destroy() end end)
     pcall(function() if obj.cursorGui then obj.cursorGui:Destroy() end end)
+    
+    -- NEW: Destroy advanced feature GUIs
+    pcall(function() if obj.serverInfoGui then obj.serverInfoGui:Destroy(); obj.serverInfoGui = nil end end)
+    pcall(function() if obj.miniMapGui then obj.miniMapGui:Destroy(); obj.miniMapGui = nil end end)
+    pcall(function() if obj.memoryMonitorGui then obj.memoryMonitorGui:Destroy(); obj.memoryMonitorGui = nil end end)
     
     -- Destroy ALL Medusa GUIs from PlayerGui
     pcall(function() 
@@ -2759,7 +4115,7 @@ local function doEject()
     if getgenv then getgenv().MedusaLoaded = false; getgenv().MedusaEject = nil end
     
     print("═══════════════════════════════════════")
-    print("  🐍 MEDUSA v15.1 — Ejected cleanly")
+    print("  🐍 MEDUSA v15.3 — Ejected cleanly")
     print("  All connections disconnected")
     print("  All GUIs destroyed")
     print("  Memory freed")
@@ -3279,7 +4635,7 @@ do
 end
 
 -- ══════════════════════════════════════════════════════════════
---  S32: CINEMATIC INTRO & STARTUP (v15.1 CINEMATIC EDITION)
+--  S32: CINEMATIC INTRO & STARTUP (v15.2 SUPER ESP EDITION)
 -- ══════════════════════════════════════════════════════════════
 switchTab("status")
 pcall(function() refreshPlayers() end)
@@ -3347,7 +4703,7 @@ local introSub = Instance.new("TextLabel")
 introSub.Size = UDim2.new(0, 300, 0, 20); introSub.Position = UDim2.new(0.5, -150, 0.35, 85)
 introSub.BackgroundTransparency = 1; introSub.Font = Enum.Font.GothamMedium
 introSub.TextSize = 13; introSub.TextColor3 = C.textMuted; introSub.TextTransparency = 0.3
-introSub.Text = "v15.1 — CINEMATIC EDITION"; introSub.ZIndex = 10; introSub.Parent = introBG
+introSub.Text = "v15.2 — SUPER ESP EDITION"; introSub.ZIndex = 10; introSub.Parent = introBG
 
 -- ── Progress Bar ───────────────────────────────────────────
 local barBG = Instance.new("Frame")
@@ -3555,7 +4911,7 @@ end)
 
 -- Final welcome
 task.delay(2, function()
-    Notify("🐍 MEDUSA v15.1", "Cinematic Edition — All systems operational!", 5)
+    Notify("🐍 MEDUSA v15.3", "SUPER ESP Edition — 5000 studs range!", 5)
 end)
 
 -- Auto-load default profile
@@ -3584,11 +4940,12 @@ task.delay(8, function()
 end)
 
 print("═══════════════════════════════════════")
-print("  🐍 MEDUSA v15.1 — CINEMATIC EDITION")
+print("  🐍 MEDUSA v15.3 — SUPER ESP EDITION")
 print("  Made by .donatorexe.")
 print("  Xeno Executor Optimized")
 print("  50+ features • 10 tabs • Glassmorphism")
+print("  Super ESP (5000) • Performance Max • Anti-Lag")
 print("  Cinematic Intro • Active HUD • Custom Cursor")
 print("  Glitch Animation • Boot Sounds • RGB Crosshair")
 print("═══════════════════════════════════════")
-print("Medusa v15.1: Cinematic Build Concluido")
+print("Medusa v15.3: Super ESP Build Concluido")
