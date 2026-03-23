@@ -1,6 +1,6 @@
 --[[
     ╔══════════════════════════════════════════════════════════════╗
-     ║       🐍 MEDUSA v15.1.8 — CINEMATIC EDITION 🐍            ║
+     ║       🐍 MEDUSA v15.1.9 — CINEMATIC EDITION 🐍            ║
     ║                Made by .donatorexe.                         ║
     ║           Xeno Executor Optimized | .lua                    ║
     ╠══════════════════════════════════════════════════════════════╣
@@ -290,6 +290,77 @@ local C = {
 }
 C.card = C.bgCard; C.muted = C.textMuted; C.aimbot = C.purple; C.fly = C.blue
 
+-- ══════════════════════════════════════════════════════════════
+--  GLOBAL THEME SYSTEM v15.1.9
+-- ══════════════════════════════════════════════════════════════
+local globalThemes = {
+    Emerald = {
+        name = "Emerald",
+        accent = Color3.fromRGB(80, 220, 145),
+        neonGlow = Color3.fromRGB(80, 255, 200),
+        primary = Color3.fromRGB(60, 200, 125),
+        secondary = Color3.fromRGB(40, 180, 105),
+        glow = Color3.fromRGB(120, 255, 180)
+    },
+    Ruby = {
+        name = "Ruby", 
+        accent = Color3.fromRGB(220, 80, 145),
+        neonGlow = Color3.fromRGB(255, 80, 200),
+        primary = Color3.fromRGB(200, 60, 125),
+        secondary = Color3.fromRGB(180, 40, 105),
+        glow = Color3.fromRGB(255, 120, 180)
+    },
+    Sapphire = {
+        name = "Sapphire",
+        accent = Color3.fromRGB(80, 145, 220),
+        neonGlow = Color3.fromRGB(80, 200, 255),
+        primary = Color3.fromRGB(60, 125, 200),
+        secondary = Color3.fromRGB(40, 105, 180),
+        glow = Color3.fromRGB(120, 180, 255)
+    },
+    Amethyst = {
+        name = "Amethyst",
+        accent = Color3.fromRGB(145, 80, 220),
+        neonGlow = Color3.fromRGB(200, 80, 255),
+        primary = Color3.fromRGB(125, 60, 200),
+        secondary = Color3.fromRGB(105, 40, 180),
+        glow = Color3.fromRGB(180, 120, 255)
+    }
+}
+
+-- Current active theme
+local currentTheme = globalThemes.Emerald
+
+-- Theme application function
+local function applyGlobalTheme(themeName)
+    local theme = globalThemes[themeName]
+    if not theme then return false end
+    
+    currentTheme = theme
+    C.accent = theme.accent
+    C.neonGlow = theme.neonGlow
+    
+    -- Update all registered theme elements
+    for _, el in ipairs(obj.themeElements) do 
+        pcall(function() 
+            if el.obj and el.prop then 
+                if el.condition and not el.condition() then return end
+                el.obj[el.prop] = theme.accent 
+            end 
+        end) 
+    end
+    
+    -- Update Predator HUD if it exists
+    pcall(function()
+        if obj.thFrame and obj.thFrame:FindFirstChild("Border") then
+            obj.thFrame.Border.Color = theme.accent
+        end
+    end)
+    
+    return true
+end
+
+-- Legacy theme support (backwards compatibility)
 local themes = {
     { name = "Medusa",    accent = Color3.fromRGB(0, 220, 180) },
     { name = "Vaporwave", accent = Color3.fromRGB(170, 90, 250) },
@@ -663,14 +734,14 @@ local function mkToggle(parent, text, default, order, callback)
     local track = inst("Frame")
     track.Size = UDim2.new(0, TW, 0, TH)
     track.Position = UDim2.new(1, -(TW + 12), 0.5, -TH / 2)
-    track.BackgroundColor3 = default and C.accent or C.toggleOff
+    track.BackgroundColor3 = default and currentTheme.accent or C.toggleOff
     track.BackgroundTransparency = default and 0.15 or 0.3
     track.BorderSizePixel = 0; track.Parent = row; track.ClipsDescendants = true
     inst("UICorner", track).CornerRadius = UDim.new(0, 10) -- Cinematic Ultra: 10px rounding
 
     -- Neon glow aura (only visible when ON)
     local glow = inst("UIStroke", track)
-    glow.Color = C.accent; glow.Thickness = default and 2.5 or 0; glow.Transparency = default and 0.25 or 1
+    glow.Color = currentTheme.accent; glow.Thickness = default and 2.5 or 0; glow.Transparency = default and 0.25 or 1
     glow.ApplyStrokeMode = Enum.ApplyStrokeMode.Border -- Smoothing protocol
 
     local knobSize = TH - 4
@@ -681,7 +752,7 @@ local function mkToggle(parent, text, default, order, callback)
     inst("UICorner", knob).CornerRadius = UDim.new(0, 10) -- Cinematic Ultra: 10px rounding
     -- Knob inner glow
     local knobGlow = inst("UIStroke", knob)
-    knobGlow.Color = default and C.accent or Color3.fromRGB(80, 80, 80)
+    knobGlow.Color = default and currentTheme.accent or Color3.fromRGB(80, 80, 80)
     knobGlow.Thickness = 1.5; knobGlow.Transparency = 0.3
     knobGlow.ApplyStrokeMode = Enum.ApplyStrokeMode.Border -- Smoothing protocol
 
@@ -694,14 +765,14 @@ local function mkToggle(parent, text, default, order, callback)
             Position = UDim2.new(posX, offX, 0.5, -knobSize / 2)
         }):Play()
         TS:Create(track, TweenInfo.new(0.18, Enum.EasingStyle.Quad), {
-            BackgroundColor3 = state and C.accent or C.toggleOff,
+            BackgroundColor3 = state and currentTheme.accent or C.toggleOff,
             BackgroundTransparency = state and 0.15 or 0.3,
         }):Play()
         TS:Create(glow, TweenInfo.new(0.18, Enum.EasingStyle.Quad), {
-            Thickness = state and 2.5 or 0, Transparency = state and 0.25 or 1, Color = C.accent,
+            Thickness = state and 2.5 or 0, Transparency = state and 0.25 or 1, Color = currentTheme.accent,
         }):Play()
         TS:Create(knobGlow, TweenInfo.new(0.18, Enum.EasingStyle.Quad), {
-            Color = state and C.accent or Color3.fromRGB(80, 80, 80),
+            Color = state and currentTheme.accent or Color3.fromRGB(80, 80, 80),
         }):Play()
         TS:Create(lbl, TweenInfo.new(0.18, Enum.EasingStyle.Quad), {
             TextColor3 = state and Color3.new(1, 1, 1) or C.text
@@ -792,7 +863,7 @@ local function mkSlider(parent, text, initVal, minV, maxV, order, callback)
     valBadge.Text = tostring(initVal); valBadge.Parent = row
     inst("UICorner", valBadge).CornerRadius = UDim.new(0, 6) -- Cinematic Ultra: 6px rounding
     pcall(function() valBadge.FontFace = Font.fromName("RobotoCondensed", Enum.FontWeight.Bold) end)
-    local vbSk = inst("UIStroke", valBadge); vbSk.Color = C.accent; vbSk.Thickness = 1; vbSk.Transparency = 0.6
+    local vbSk = inst("UIStroke", valBadge); vbSk.Color = currentTheme.accent; vbSk.Thickness = 1; vbSk.Transparency = 0.6
     vbSk.ApplyStrokeMode = Enum.ApplyStrokeMode.Border -- Smoothing protocol
     table.insert(obj.themeElements, { obj = valBadge, prop = "TextColor3" })
     table.insert(obj.themeElements, { obj = valBadge, prop = "BackgroundColor3" })
@@ -815,7 +886,7 @@ local function mkSlider(parent, text, initVal, minV, maxV, order, callback)
     table.insert(obj.themeElements, { obj = fill, prop = "BackgroundColor3" })
     -- Neon glow on fill
     local fillGlow = inst("UIStroke", fill)
-    fillGlow.Color = C.accent; fillGlow.Thickness = 1; fillGlow.Transparency = 0.5
+    fillGlow.Color = currentTheme.accent; fillGlow.Thickness = 1; fillGlow.Transparency = 0.5
     fillGlow.ApplyStrokeMode = Enum.ApplyStrokeMode.Border -- Smoothing protocol
     table.insert(obj.themeElements, { obj = fillGlow, prop = "Color" })
 
@@ -829,7 +900,7 @@ local function mkSlider(parent, text, initVal, minV, maxV, order, callback)
     knob.BackgroundTransparency = 0.05
     knob.BorderSizePixel = 0; knob.ZIndex = 10; knob.Parent = track
     inst("UICorner", knob).CornerRadius = UDim.new(0, 10) -- Cinematic Ultra: 10px rounding
-    local ksk = inst("UIStroke", knob); ksk.Color = C.accent; ksk.Thickness = 2.5; ksk.Transparency = 0.1
+    local ksk = inst("UIStroke", knob); ksk.Color = currentTheme.accent; ksk.Thickness = 2.5; ksk.Transparency = 0.1
     ksk.ApplyStrokeMode = Enum.ApplyStrokeMode.Border -- Smoothing protocol
     table.insert(obj.themeElements, { obj = ksk, prop = "Color" })
 
@@ -912,10 +983,10 @@ local function mkPartSelector(parent, order)
         b.BackgroundColor3 = nm == cfg.aimbotPart and C.accent or C.glass
         b.BackgroundTransparency = nm == cfg.aimbotPart and 0.25 or 0.6
         b.BorderSizePixel = 0; b.AutoButtonColor = false; b.Font = Enum.Font.GothamBold
-        b.TextSize = 11; b.TextColor3 = nm == cfg.aimbotPart and C.accent or C.textMuted
+        b.TextSize = 11; b.TextColor3 = nm == cfg.aimbotPart and currentTheme.accent or C.textMuted
         b.Text = nm; b.Parent = row; b.ClipsDescendants = true
         inst("UICorner", b).CornerRadius = UDim.new(0, 10) -- Cinematic Ultra: 10px rounding
-        local bsk = Instance.new("UIStroke", b); bsk.Color = nm == cfg.aimbotPart and C.accent or C.border
+        local bsk = Instance.new("UIStroke", b); bsk.Color = nm == cfg.aimbotPart and currentTheme.accent or C.border
         bsk.Thickness = 1; bsk.Transparency = nm == cfg.aimbotPart and 0.2 or 0.6
         bsk.ApplyStrokeMode = Enum.ApplyStrokeMode.Border -- Smoothing protocol
         btns[nm] = { btn = b, sk = bsk }
@@ -1229,9 +1300,9 @@ sidePad.PaddingLeft = UDim.new(0, 4); sidePad.PaddingRight = UDim.new(0, 4)
 local tabIndicator = inst("Frame")
 tabIndicator.Size = UDim2.new(0, 3, 0, 28)
 tabIndicator.Position = UDim2.new(0, 0, 0, 10)
-tabIndicator.BackgroundColor3 = C.accent; tabIndicator.BorderSizePixel = 0; tabIndicator.ZIndex = 5; tabIndicator.Parent = sidebar
+tabIndicator.BackgroundColor3 = currentTheme.accent; tabIndicator.BorderSizePixel = 0; tabIndicator.ZIndex = 5; tabIndicator.Parent = sidebar
 mkCorner(tabIndicator, 2)
-local indGlow = inst("UIStroke", tabIndicator); indGlow.Color = C.accent; indGlow.Thickness = 3; indGlow.Transparency = 0.5
+local indGlow = inst("UIStroke", tabIndicator); indGlow.Color = currentTheme.accent; indGlow.Thickness = 3; indGlow.Transparency = 0.5
 table.insert(obj.rgbElements, { obj = tabIndicator, prop = "BackgroundColor3", type = "indicator" })
 table.insert(obj.rgbElements, { obj = indGlow, prop = "Color", type = "indicator" })
 table.insert(obj.themeElements, { obj = tabIndicator, prop = "BackgroundColor3" })
@@ -1308,7 +1379,7 @@ local TABS = {
     { id = "visuals", icon = "👁️" }, { id = "movement", icon = "🏃" },
     { id = "combat", icon = "⚔️" }, { id = "players", icon = "👥" },
     { id = "misc", icon = "🔧" }, { id = "binds", icon = "🎮" },
-    { id = "style", icon = "🎨" }, { id = "gui", icon = "🖥️" },
+    { id = "style", icon = "🎨" }, { id = "themes", icon = "🎭" }, { id = "gui", icon = "🖥️" },
 }
 
 -- Create tab buttons and scroll frames
@@ -1329,7 +1400,7 @@ for i, tab in ipairs(TABS) do
     tooltip.TextSize = 10; tooltip.TextColor3 = C.text; tooltip.Text = tab.id:upper()
     tooltip.ZIndex = 20; tooltip.Visible = false; tooltip.Parent = tbtn
     inst("UICorner", tooltip).CornerRadius = UDim.new(0, 8) -- Cinematic Ultra: 8px rounding for tooltips
-    local ttSk = Instance.new("UIStroke", tooltip); ttSk.Color = C.accent; ttSk.Thickness = 1; ttSk.Transparency = 0.4
+    local ttSk = Instance.new("UIStroke", tooltip); ttSk.Color = currentTheme.accent; ttSk.Thickness = 1; ttSk.Transparency = 0.4
     ttSk.ApplyStrokeMode = Enum.ApplyStrokeMode.Border -- Smoothing protocol
 
     tbtn.MouseEnter:Connect(function()
@@ -1442,7 +1513,7 @@ wmPill.Position = UDim2.new(0.5, -195, 0, 8)
 wmPill.BackgroundColor3 = C.glass; wmPill.BackgroundTransparency = 0.2
 wmPill.BorderSizePixel = 0; wmPill.ClipsDescendants = true; wmPill.Parent = wmPillGui
 inst("UICorner", wmPill).CornerRadius = UDim.new(0, 15) -- Cinematic Ultra: 15px rounding
-local wmSk = Instance.new("UIStroke", wmPill); wmSk.Color = C.accent; wmSk.Thickness = 1.5; wmSk.Transparency = 0.35
+local wmSk = Instance.new("UIStroke", wmPill); wmSk.Color = currentTheme.accent; wmSk.Thickness = 1.5; wmSk.Transparency = 0.35
 wmSk.ApplyStrokeMode = Enum.ApplyStrokeMode.Border -- Smoothing protocol
 table.insert(obj.themeElements, { obj = wmSk, prop = "Color" })
 
@@ -1588,7 +1659,7 @@ do local tab = obj.tabFrames["visuals"]; if tab then
         sb.Text = sname; sb.Parent = styleRow; inst("UICorner", sb).CornerRadius = UDim.new(0, 10)
         local sbSk = inst("UIStroke", sb); sbSk.Color = C.border; sbSk.Thickness = 1; sbSk.Transparency = 0.6
         sbSk.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-        local sbsk = Instance.new("UIStroke", sb); sbsk.Color = si == cfg.crossStyle and C.accent or C.border; sbsk.Thickness = 1
+        local sbsk = Instance.new("UIStroke", sb); sbsk.Color = si == cfg.crossStyle and currentTheme.accent or C.border; sbsk.Thickness = 1
         styleBtns[si] = { btn = sb, sk = sbsk }
         sb.MouseButton1Click:Connect(function()
             cfg.crossStyle = si
@@ -1919,7 +1990,7 @@ do local tab = obj.tabFrames["style"]; if tab then
     pfSaveBtn.Parent = pfNameFrame; inst("UICorner", pfSaveBtn).CornerRadius = UDim.new(0, 10)
     local psSk = inst("UIStroke", pfSaveBtn); psSk.Color = C.border; psSk.Thickness = 1; psSk.Transparency = 0.6
     psSk.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    Instance.new("UIStroke", pfSaveBtn).Color = C.accent; pfSaveBtn:FindFirstChildWhichIsA("UIStroke").Thickness = 1
+    Instance.new("UIStroke", pfSaveBtn).Color = currentTheme.accent; pfSaveBtn:FindFirstChildWhichIsA("UIStroke").Thickness = 1
 
     -- Profiles scroll list
     local pfScrollLabel = Instance.new("TextLabel"); pfScrollLabel.Size = UDim2.new(1, 0, 0, 18); pfScrollLabel.BackgroundTransparency = 1
@@ -2015,6 +2086,99 @@ end end
          cfg.gui = { panelW = 680, panelH = 540, sidebarW = 65, topbarH = 48, fontSize = 12, titleSize = 18, cardSpacing = 10, cardPadding = 12, borderWidth = 1.5, cornerRadius = 14, toggleW = 40, toggleH = 20, sliderH = 10, btnH = 36, panelOpacity = 0.12, accentR = 0, accentG = 220, accentB = 180, bgR = 12, bgG = 12, bgB = 18, sideR = 10, sideG = 10, sideB = 16 }
          panel.Size = UDim2.new(0, 680, 0, 540); panel.BackgroundTransparency = 0.12; applyTheme(Color3.fromRGB(0, 220, 180)); notify("🔄 GUI Reset!", C.warning)
      end)
+ end end
+
+-- ── S21: GLOBAL THEMES ───────────────────────────────────────────
+ do local tab = obj.tabFrames["themes"]; if tab then
+     local tc = mkCard(tab, 180, 1); mkLabel(tc, "🎭 GLOBAL THEMES v15.1.9", cfg.gui.fontSize, C.textMuted, 12, 6)
+     local ti = inst("Frame"); ti.Size = UDim2.new(1, -18, 0, 140); ti.Position = UDim2.new(0, 9, 0, 30); ti.BackgroundTransparency = 1; ti.Parent = tc
+     local til = inst("UIListLayout", ti); til.Padding = UDim.new(0, 8)
+     
+     -- Theme description
+     local descLbl = mkLabel(ti, "✨ Instant theme switching with dynamic color updates", 10, C.textMuted, 0, 0, 1, 20)
+     descLbl.TextWrapped = true
+     
+     -- Theme buttons container
+     local themeContainer = inst("Frame"); themeContainer.Size = UDim2.new(1, 0, 0, 100); themeContainer.BackgroundTransparency = 1; themeContainer.Parent = ti
+     local themeGrid = inst("UIGridLayout", themeContainer); themeGrid.CellSize = UDim2.new(0.5, -4, 0, 45); themeGrid.CellPadding = UDim.new(0, 8, 0, 8)
+     
+     -- Create theme buttons
+     local function createThemeButton(themeName, themeData)
+         local btn = inst("TextButton")
+         btn.Size = UDim2.new(1, 0, 1, 0)
+         btn.BackgroundColor3 = themeData.accent
+         btn.BackgroundTransparency = 0.8
+         btn.BorderSizePixel = 0
+         btn.AutoButtonColor = false
+         btn.Font = Enum.Font.GothamBold
+         btn.TextSize = 12
+         btn.TextColor3 = Color3.new(1, 1, 1)
+         btn.Text = "🎨 " .. themeName
+         btn.Parent = themeContainer
+         inst("UICorner", btn).CornerRadius = UDim.new(0, 10)
+         
+         local btnStroke = inst("UIStroke", btn)
+         btnStroke.Color = themeData.accent
+         btnStroke.Thickness = 2
+         btnStroke.Transparency = 0.3
+         btnStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+         
+         -- Add to theme elements for dynamic updates
+         table.insert(obj.themeElements, { obj = btn, prop = "BackgroundColor3" })
+         table.insert(obj.themeElements, { obj = btnStroke, prop = "Color" })
+         
+         -- Hover effects
+         btn.MouseEnter:Connect(function()
+             TS:Create(btn, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+                 BackgroundTransparency = 0.6
+             }):Play()
+             TS:Create(btnStroke, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+                 Thickness = 3,
+                 Transparency = 0.2
+             }):Play()
+         end)
+         
+         btn.MouseLeave:Connect(function()
+             TS:Create(btn, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+                 BackgroundTransparency = 0.8
+             }):Play()
+             TS:Create(btnStroke, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+                 Thickness = 2,
+                 Transparency = 0.3
+             }):Play()
+         end)
+         
+         -- Click handler
+         btn.MouseButton1Click:Connect(function()
+             playClick()
+             local success = applyGlobalTheme(themeName)
+             if success then
+                 notify("🎭 Theme Changed", themeName .. " theme applied!", themeData.accent)
+                 -- Visual feedback
+                 TS:Create(btn, TweenInfo.new(0.15, Enum.EasingStyle.Back), {
+                     Size = UDim2.new(1.05, 0, 1.05, 0)
+                 }):Play()
+                 task.delay(0.15, function()
+                     TS:Create(btn, TweenInfo.new(0.15, Enum.EasingStyle.Back), {
+                         Size = UDim2.new(1, 0, 1, 0)
+                     }):Play()
+                 end)
+             end
+         end)
+         
+         -- Highlight current theme
+         if currentTheme.name == themeName then
+             btnStroke.Thickness = 3
+             btnStroke.Transparency = 0.1
+             btn.BackgroundTransparency = 0.5
+         end
+     end
+     
+     -- Create buttons for each theme
+     createThemeButton("Emerald", globalThemes.Emerald)
+     createThemeButton("Ruby", globalThemes.Ruby)
+     createThemeButton("Sapphire", globalThemes.Sapphire)
+     createThemeButton("Amethyst", globalThemes.Amethyst)
  end end
 
 -- ── S20B: PREDATOR SYSTEM HUD (Drawing Class) ──────────────
@@ -2960,7 +3124,7 @@ do -- Target HUD
     local thGui = createGui("MedusaTH")
     local thPanel = Instance.new("Frame"); thPanel.Size = UDim2.new(0, 230, 0, 110); thPanel.Position = UDim2.new(0.5, -115, 0.75, 0)
     thPanel.BackgroundColor3 = C.glass; thPanel.BackgroundTransparency = 1; thPanel.BorderSizePixel = 0; thPanel.Visible = false; thPanel.Parent = thGui; mkCorner(thPanel, CR)
-    local thSk = Instance.new("UIStroke", thPanel); thSk.Color = C.accent; thSk.Thickness = 1.5; thSk.Transparency = 1
+    local thSk = Instance.new("UIStroke", thPanel); thSk.Color = currentTheme.accent; thSk.Thickness = 1.5; thSk.Transparency = 1
     local thNameLbl = mkLabel(thPanel, "", 14, Color3.new(1,1,1), 10, 8); thNameLbl.Font = Enum.Font.GothamBold
     local thHpBg = Instance.new("Frame"); thHpBg.Size = UDim2.new(1, -20, 0, 6); thHpBg.Position = UDim2.new(0, 10, 0, 30); thHpBg.BackgroundColor3 = Color3.fromRGB(40,40,40); thHpBg.BorderSizePixel = 0; thHpBg.Parent = thPanel; mkCorner(thHpBg, 3)
     local thHpFill = Instance.new("Frame"); thHpFill.Size = UDim2.new(1, 0, 1, 0); thHpFill.BackgroundColor3 = C.success; thHpFill.BorderSizePixel = 0; thHpFill.Parent = thHpBg; mkCorner(thHpFill, 3)
@@ -3007,7 +3171,7 @@ do -- Feedback Module
     end
     local specGui = createGui("MedusaSpec"); obj.feedbackGui = specGui
     local specPanel = Instance.new("Frame"); specPanel.Size = UDim2.new(0, 170, 0, 30); specPanel.Position = UDim2.new(0, 16, 0, 50); specPanel.BackgroundColor3 = C.glass; specPanel.BackgroundTransparency = 0.15; specPanel.BorderSizePixel = 0; specPanel.Visible = false; specPanel.Parent = specGui; mkCorner(specPanel, 8)
-    local specSk = Instance.new("UIStroke", specPanel); specSk.Color = C.accent; specSk.Thickness = 1; specSk.Transparency = 0.4
+    local specSk = Instance.new("UIStroke", specPanel); specSk.Color = currentTheme.accent; specSk.Thickness = 1; specSk.Transparency = 0.4
     local specTitle = mkLabel(specPanel, "👁️ Spectators: 0", 10, C.text, 8, 2, 1, 16); specTitle.Font = Enum.Font.GothamBold
     local specList = mkLabel(specPanel, "", 9, C.textMuted, 8, 18, 1, 40); specList.TextWrapped = true; specList.TextYAlignment = Enum.TextYAlignment.Top
     makeDraggable(specPanel, specPanel)
@@ -3533,7 +3697,7 @@ barFill.BorderSizePixel = 0; barFill.ZIndex = 11; barFill.Parent = barBG; mkCorn
 
 -- Glow on fill
 local barGlow = inst("UIStroke", barFill)
-barGlow.Color = C.accent; barGlow.Thickness = 1.5; barGlow.Transparency = 0.4
+barGlow.Color = currentTheme.accent; barGlow.Thickness = 1.5; barGlow.Transparency = 0.4
 
 -- Percentage
 local barPct = inst("TextLabel")
