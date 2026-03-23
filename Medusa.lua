@@ -60,6 +60,30 @@ local LocalizationService = getService("LocalizationService")
 local UIS = UserInputService
 local TS = TweenService
 
+-- S2B: STABILITY GUARDS (services/player/camera readiness)
+if not Players or not Workspace or not RunService or not TweenService then
+    warn("[Medusa] Missing required services; aborting to avoid nil crashes.")
+    return
+end
+
+local function waitForLocalPlayer(timeout)
+    local t0 = tick()
+    while not Players.LocalPlayer do
+        if timeout and (tick() - t0) > timeout then return nil end
+        task.wait()
+    end
+    return Players.LocalPlayer
+end
+
+local function waitForCamera(timeout)
+    local t0 = tick()
+    while not Workspace.CurrentCamera do
+        if timeout and (tick() - t0) > timeout then return nil end
+        task.wait()
+    end
+    return Workspace.CurrentCamera
+end
+
 -- ── UI Sound System (v15.1) ────────────────────────────────
 local function createSound(id, volume, pitch)
     local s = Instance.new("Sound")
@@ -141,9 +165,17 @@ task.spawn(function()
 end)
 local RS = RunService
 
-local player = Players.LocalPlayer
-local playerGui = player:WaitForChild("PlayerGui")
-local camera = Workspace.CurrentCamera
+local player = waitForLocalPlayer(15) or Players.LocalPlayer
+if not player then
+    warn("[Medusa] LocalPlayer not available; aborting to avoid nil crashes.")
+    return
+end
+local playerGui = player:FindFirstChild("PlayerGui") or player:WaitForChild("PlayerGui", 15)
+if not playerGui then
+    warn("[Medusa] PlayerGui not available; aborting to avoid nil crashes.")
+    return
+end
+local camera = waitForCamera(15) or Workspace.CurrentCamera
 local mouse = player:GetMouse()
 
 local XC = {
@@ -2062,12 +2094,21 @@ local function updateESP()
 end
 
 addConn(RS.RenderStepped:Connect(function()
-    if not st.running then return end
-    globalFrames = globalFrames + 1
-    pcall(function() updateAimbot() end)
-    pcall(function() updateMovement() end)
-    pcall(function() updateUIElements() end)
-    pcall(function() updateESP() end)
+    local ok = pcall(function()
+        if not st.running then return end
+        if not player or not player.Parent then return end
+        if not Workspace or not Workspace.Parent then return end
+        if not camera or camera ~= Workspace.CurrentCamera then camera = Workspace.CurrentCamera end
+        if not camera then return end
+        globalFrames = (globalFrames or 0) + 1
+        pcall(function() updateAimbot() end)
+        pcall(function() updateMovement() end)
+        pcall(function() updateUIElements() end)
+        pcall(function() updateESP() end)
+    end)
+    if not ok then
+        -- swallow to keep RenderStepped thread alive
+    end
 end))
 
 -- Silent Aim v2 (Curve & Hit Chance)
@@ -3491,14 +3532,16 @@ print("════════════════════════�
 print("Medusa v15.1: Cinematic Build Concluido")
 
 -- ── S32: FINAL BOOTSTRAP ──────────────────────────────────
-task.delay(0.1, function()
+task.spawn(function()
+    task.wait(0.5)
     pcall(function()
-        if not getgenv().MedusaLoaded then return end
+        if getgenv and (not getgenv().MedusaLoaded) then return end
         print("[Medusa] Finalizing environment sync...")
         -- Re-verify camera one last time before full logic starts
         if not camera then camera = Workspace.CurrentCamera end
+        if not camera then camera = waitForCamera(5) or Workspace.CurrentCamera end
         -- Force initial tab sync
-        if obj.switchTab then obj.switchTab("status") end
+        if obj and obj.switchTab then obj.switchTab("status") end
         print("[Medusa] 🐍 FULLY OPERATIONAL!")
     end)
 end)
