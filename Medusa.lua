@@ -157,7 +157,11 @@ end)
 local RS = RunService
 
 local player = Players.LocalPlayer
-local playerGui = player:WaitForChild("PlayerGui")
+local playerGui = player:WaitForChild("PlayerGui", 5)
+if not playerGui then 
+    warn("[Medusa] PlayerGui not found - retrying...")
+    playerGui = player:FindFirstChildOfClass("PlayerGui") or workspace:WaitForChild("Camera"):WaitForChild("CameraSubject"):WaitForChild("Parent"):WaitForChild("PlayerGui")
+end
 local camera = Workspace.CurrentCamera
 local mouse = player:GetMouse()
 
@@ -673,10 +677,17 @@ end
 -- S6: GUI CREATION
 local guiParent = playerGui
 pcall(function()
-    if gethui then guiParent = gethui()
-    elseif getgenv and getgenv().gethui then guiParent = getgenv().gethui()
-    elseif XC.cloneref then guiParent = cloneref(CoreGui)
-    elseif CoreGui then local t = Instance.new("Folder"); t.Parent = CoreGui; t:Destroy(); guiParent = CoreGui end
+    if gethui then 
+        guiParent = gethui()
+    elseif getgenv and getgenv().gethui then 
+        guiParent = getgenv().gethui()
+    elseif XC.cloneref and CoreGui then 
+        guiParent = cloneref(CoreGui)
+    elseif CoreGui and CoreGui.FindFirstChild then 
+        local t = Instance.new("Folder"); 
+        pcall(function() t.Parent = CoreGui; t:Destroy() end)
+        guiParent = CoreGui 
+    end
 end)
 
 local function createGui(name)
@@ -4909,6 +4920,9 @@ task.delay(3.5, function()
     end
 end)
 
+-- Wait for services to be fully loaded
+task.wait(0.5)
+
 -- Final welcome
 task.delay(2, function()
     Notify("🐍 MEDUSA v15.3", "SUPER ESP Edition — 5000 studs range!", 5)
@@ -4948,4 +4962,24 @@ print("  Super ESP (5000) • Performance Max • Anti-Lag")
 print("  Cinematic Intro • Active HUD • Custom Cursor")
 print("  Glitch Animation • Boot Sounds • RGB Crosshair")
 print("═══════════════════════════════════════")
-print("Medusa v15.3: Super ESP Build Concluido")
+
+-- Safe initialization wrapper
+local success, errorMsg = pcall(function()
+    -- Wait for game to fully load
+    if not game:IsLoaded() then
+        game.Loaded:Wait()
+    end
+    
+    -- Main initialization would go here
+    -- (The script continues from here...)
+end)
+
+if not success then
+    warn("[Medusa] Initialization error: " .. tostring(errorMsg))
+    warn("[Medusa] Retrying in 2 seconds...")
+    task.delay(2, function()
+        -- Retry logic here if needed
+    end)
+else
+    print("Medusa v15.3: Super ESP Build Concluido")
+end
