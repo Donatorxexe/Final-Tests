@@ -156,14 +156,64 @@ task.spawn(function()
 end)
 local RS = RunService
 
-local player = Players.LocalPlayer
-local playerGui = player:WaitForChild("PlayerGui", 5)
-if not playerGui then 
-    warn("[Medusa] PlayerGui not found - retrying...")
-    playerGui = player:FindFirstChildOfClass("PlayerGui") or workspace:WaitForChild("Camera"):WaitForChild("CameraSubject"):WaitForChild("Parent"):WaitForChild("PlayerGui")
+-- Wait for game to be fully loaded
+if not game:IsLoaded() then
+    game.Loaded:Wait()
 end
+
+-- Wait for player to be available
+local player = Players.LocalPlayer
+if not player then
+    Players:GetPropertyChangedSignal("LocalPlayer"):Wait()
+    player = Players.LocalPlayer
+end
+
+-- Wait for character to be available
+local character = player.Character or player.CharacterAdded:Wait()
+
+-- Wait for PlayerGui with robust fallback
+local playerGui = player:WaitForChild("PlayerGui", 10)
+if not playerGui then 
+    warn("[Medusa] PlayerGui not found - using fallback...")
+    playerGui = player:FindFirstChildOfClass("PlayerGui")
+    if not playerGui then
+        -- Create a temporary PlayerGui if it doesn't exist
+        playerGui = Instance.new("PlayerGui")
+        playerGui.Parent = player
+    end
+end
+
+-- Wait for camera
 local camera = Workspace.CurrentCamera
+if not camera then
+    Workspace:GetPropertyChangedSignal("CurrentCamera"):Wait()
+    camera = Workspace.CurrentCamera
+end
+
+-- Wait for mouse
 local mouse = player:GetMouse()
+if not mouse then
+    -- Fallback mouse creation
+    local remoteEvent = Instance.new("RemoteEvent")
+    mouse = {
+        Hit = CFrame.new(),
+        Target = nil,
+        Button1Down = Instance.new("BindableEvent").Event,
+        Button1Up = Instance.new("BindableEvent").Event,
+        Button2Down = Instance.new("BindableEvent").Event,
+        Button2Up = Instance.new("BindableEvent").Event,
+        Move = Instance.new("BindableEvent").Event,
+        KeyDown = Instance.new("BindableEvent").Event,
+        KeyUp = Instance.new("BindableEvent").Event,
+        Wheel = Instance.new("BindableEvent").Event,
+        WheelForward = Instance.new("BindableEvent").Event,
+        WheelBackward = Instance.new("BindableEvent").Event,
+        X = 0, Y = 0,
+        ViewSizeX = 1920, ViewSizeY = 1080,
+        Origin = CFrame.new(),
+        UnitRay = Ray.new(Vector3.new(), Vector3.new(0, 0, -1))
+    }
+end
 
 local XC = {
     hookmetamethod = typeof(hookmetamethod) == "function",
@@ -691,14 +741,90 @@ pcall(function()
 end)
 
 local function createGui(name)
-    local sg = Instance.new("ScreenGui")
-    sg.Name = name or ("Medusa_" .. math.random(100000, 999999))
-    sg.ResetOnSpawn = false; sg.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    sg.DisplayOrder = 2147483647; sg.IgnoreGuiInset = true
-    local ok = pcall(function() sg.Parent = guiParent end)
-    if not ok then pcall(function() sg.Parent = CoreGui end); if not sg.Parent then sg.Parent = playerGui end end
-    pcall(function() if protect_gui then protect_gui(sg) elseif syn and syn.protect_gui then syn.protect_gui(sg) end end)
-    return sg
+    -- Wait for all required services
+    local success, result = pcall(function()
+        if not game:IsLoaded() then
+            game.Loaded:Wait()
+        end
+        
+        -- Ensure we have a valid parent
+        local parent = guiParent
+        if not parent or not parent.Parent then
+            -- Try to get a fresh parent
+            if player and player.Parent then
+                parent = player:FindFirstChildOfClass("PlayerGui")
+                if not parent then
+                    parent = player:WaitForChild("PlayerGui", 5)
+                end
+            end
+            
+            -- Fallback to CoreGui if available
+            if not parent and CoreGui and CoreGui.Parent then
+                parent = CoreGui
+            end
+            
+            -- Last resort: create temporary parent
+            if not parent then
+                warn("[Medusa] No valid GUI parent found, creating temporary...")
+                parent = Instance.new("Folder")
+                parent.Name = "TempMedusaGUI"
+                parent.Parent = workspace
+            end
+        end
+        
+        -- Create the ScreenGui with error handling
+        local sg = pcall(function()
+            return Instance.new("ScreenGui")
+        end)
+        
+        if not sg then
+            error("Failed to create ScreenGui")
+        end
+        
+        sg.Name = name or ("Medusa_" .. math.random(100000, 999999))
+        sg.ResetOnSpawn = false
+        sg.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+        sg.DisplayOrder = 2147483647
+        sg.IgnoreGuiInset = true
+        
+        -- Try to parent with multiple fallbacks
+        local parented = false
+        local parents = {parent, CoreGui, playerGui, workspace}
+        
+        for _, p in ipairs(parents) do
+            if p and p.Parent then
+                local ok = pcall(function()
+                    sg.Parent = p
+                end)
+                if ok and sg.Parent then
+                    parented = true
+                    break
+                end
+            end
+        end
+        
+        if not parented then
+            error("Failed to parent ScreenGui")
+        end
+        
+        -- Apply protection if available
+        pcall(function()
+            if protect_gui then
+                protect_gui(sg)
+            elseif syn and syn.protect_gui then
+                syn.protect_gui(sg)
+            end
+        end)
+        
+        return sg
+    end)
+    
+    if not success then
+        warn("[Medusa] createGui failed: " .. tostring(result))
+        return nil
+    end
+    
+    return result
 end
 local function spEnable() end
 local function spDisable() end
@@ -2211,7 +2337,24 @@ end
 -- ══════════════════════════════════════════════════════════════
 --  S14: GUI CREATION
 -- ══════════════════════════════════════════════════════════════
-local screenGui = createGui("MedusaMain")
+
+-- Safe GUI creation with verification
+local function safeCreateGui(name, critical)
+    local gui = createGui(name)
+    if not gui then
+        warn("[Medusa] Failed to create GUI: " .. tostring(name))
+        if critical then
+            error("Critical GUI creation failed: " .. tostring(name))
+        end
+        return nil
+    end
+    return gui
+end
+
+local screenGui = safeCreateGui("MedusaMain", true)
+if not screenGui then
+    warn("[Medusa] Main GUI creation failed - some features may not work")
+end
 obj.wmGui = screenGui
 
 -- (Shadow REMOVED — was causing giant rainbow square bug)
@@ -4963,23 +5106,40 @@ print("  Cinematic Intro • Active HUD • Custom Cursor")
 print("  Glitch Animation • Boot Sounds • RGB Crosshair")
 print("═══════════════════════════════════════")
 
--- Safe initialization wrapper
-local success, errorMsg = pcall(function()
-    -- Wait for game to fully load
+-- Main initialization with comprehensive error handling
+local initSuccess, initError = pcall(function()
+    -- Wait for game to be fully loaded
     if not game:IsLoaded() then
+        print("[Medusa] Waiting for game to load...")
         game.Loaded:Wait()
     end
     
-    -- Main initialization would go here
-    -- (The script continues from here...)
+    -- Wait a bit more for all services to initialize
+    task.wait(0.5)
+    
+    -- Verify critical services are available
+    if not Players or not Players.LocalPlayer then
+        error("Players service or LocalPlayer not available")
+    end
+    
+    if not Workspace or not Workspace.CurrentCamera then
+        error("Workspace or CurrentCamera not available")
+    end
+    
+    print("[Medusa] All services verified - Starting initialization...")
+    
+    -- The rest of the script will execute from here
+    return true
 end)
 
-if not success then
-    warn("[Medusa] Initialization error: " .. tostring(errorMsg))
-    warn("[Medusa] Retrying in 2 seconds...")
-    task.delay(2, function()
-        -- Retry logic here if needed
-    end)
+if not initSuccess then
+    warn("[Medusa] CRITICAL INITIALIZATION ERROR: " .. tostring(initError))
+    warn("[Medusa] Script cannot continue. Please check:")
+    warn("  1. You are in a Roblox game")
+    warn("  2. Executor supports all required functions")
+    warn("  3. Game allows script execution")
+    warn("  4. Try rejoining the game")
 else
+    print("[Medusa] Initialization successful!")
     print("Medusa v15.3: Super ESP Build Concluido")
 end
