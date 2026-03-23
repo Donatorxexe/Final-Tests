@@ -1,40 +1,13 @@
-            --[[ Medusa v15.1.8 ]]
-    ╔══════════════════════════════════════════════════════════════╗
-     ║       🐍 MEDUSA v15.1.8 — CINEMATIC EDITION 🐍            ║
-    ║                Made by .donatorexe.                         ║
-    ║           Xeno Executor Optimized | .lua                    ║
-    ╠══════════════════════════════════════════════════════════════╣
-    ║  Layout: Horizontal Dashboard + 2-Column Content            ║
-    ║  Combat: Aimbot + Silent v2 (Curve) + Trigger + Prediction  ║
-    ║  Vision: ESP + 3D Box + Tracers + Skeleton + View Angles    ║
-    ║  Motion: Fly + Noclip + Speed + InfJump + SpinBot           ║
-    ║  HUD: Target Predador + Kill Popup + Hit Sound + Spectators ║
-    ║  Sound: UI Click/Tab Sounds + Hit Sound Feedback            ║
-    ║  Alive: Active HUD + Custom Cursor + Cinematic Intro       ║
-    ║  Engine: RGB Glow + 8 Themes + GUI Editor + Auto-Save       ║
-    ║  Style: RGB Pickers + Roundness + Transparency + Profiles   ║
-    ╚══════════════════════════════════════════════════════════════╝
-    
-    Loadstring:
-      loadstring(game:HttpGet("URL_DO_RAW/Medusa.lua"))()
-    
-    Hotkeys: T=ESP G=Aimbot F=Fly H=Hitbox U=Noclip
-             J=Silent K=Trigger M=Speed N=InfJump
-             L=Fullbright C=Crosshair Y=GUI P=Eject
-             End=Panic  RMB=Lock Target
---]]
-
--- S1: MEDUSA GLOBAL TABLE
 local Medusa = { cfg = {}, st = {}, obj = {} }
 
--- S2: ANTI-DUPLICATE
+-- S1: ANTI-DUPLICATE
 if getgenv and getgenv().MedusaLoaded then
     pcall(function() if getgenv().MedusaEject then getgenv().MedusaEject() end end)
     task.wait(0.5)
 end
 if getgenv then getgenv().MedusaLoaded = true end
 
--- S3: SERVICES & POLYFILLS
+-- S2: SERVICES & POLYFILLS
 local function getService(name) local ok, svc = pcall(function() return game:GetService(name) end); return ok and svc or nil end
 
 local Players = getService("Players")
@@ -63,9 +36,9 @@ end
 local UIS = UserInputService
 local TS = TweenService
 
--- S3B: STABILITY GUARDS (services/player/camera readiness)
+-- S2B: STABILITY GUARDS
 if not Players or not Workspace or not RunService or not TweenService then
-    warn("[Medusa] Missing required services; aborting to avoid nil crashes.")
+    warn("[Medusa] Missing required services; aborting.")
     return
 end
 
@@ -87,28 +60,11 @@ local function waitForCamera(timeout)
     return Workspace.CurrentCamera
 end
 
--- ── UI Sound System (v15.1) ────────────────────────────────
-local function createSound(id, volume, pitch)
-    local s = Instance.new("Sound")
-    s.SoundId = "rbxassetid://" .. tostring(id)
-    s.Volume = volume or 0.3; s.PlaybackSpeed = pitch or 1
-    pcall(function() s.Parent = SoundService or game end)
-    return s
-end
-
---[[ SOUND SYSTEM BYPASSED FOR STABILITY
-local uiClickSound = createSound(6895079853, 0.25, 1.1)   -- subtle click
-local uiTabSound = createSound(6895079853, 0.15, 0.75)    -- deeper tab switch
-local uiToggleOnSound = createSound(6895079853, 0.2, 1.3) -- higher pitch ON
-local uiToggleOffSound = createSound(6895079853, 0.2, 0.9) -- lower pitch OFF
-]]
-
-local function playClick() --[[ pcall(function() if uiClickSound and uiClickSound.Parent then uiClickSound:Play() end end) ]] end
-local function playTab() --[[ pcall(function() if uiTabSound and uiTabSound.Parent then uiTabSound:Play() end end) ]] end
-local function playToggleOn() --[[ pcall(function() if uiToggleOnSound and uiToggleOnSound.Parent then uiToggleOnSound:Play() end end) ]] end
-local function playToggleOff() --[[ pcall(function() if uiToggleOffSound and uiToggleOffSound.Parent then uiToggleOffSound:Play() end end) ]] end
-
--- ── Location Detection Moved to Bottom ──────────────────────
+-- ── UI Sound System (BYPASSED) ──────────────────────────
+local function playClick() end
+local function playTab() end
+local function playToggleOn() end
+local function playToggleOff() end
 
 local RS = RunService
 
@@ -1007,6 +963,7 @@ end
 -- ══════════════════════════════════════════════════════════════
 --  S10: GLASS MAIN GUI
 -- ══════════════════════════════════════════════════════════════
+if not game:IsLoaded() then game.Loaded:Wait() end
 local screenGui = createGui("MedusaMain")
 obj.wmGui = screenGui
 
@@ -3487,67 +3444,6 @@ print("Medusa v15.1: Cinematic Build Concluido")
 
 -- ── S32: FINAL BOOTSTRAP ──────────────────────────────────
 task.spawn(function()
-    -- ── Location Detection (Moved for Stability) ──────────────
-    local myRegion = "??"   -- Player's own country (from locale)
-    local svRegion = "??"   -- Server's actual location (from IP)
-
-    pcall(function()
-        -- STEP 1: Detect MY location (from client locale — always works)
-        pcall(function()
-            if LocalizationService and LocalizationService.GetCountryRegionForPlayerAsync then
-                local code = LocalizationService:GetCountryRegionForPlayerAsync(Players.LocalPlayer)
-                if code and code ~= "" then myRegion = code end
-            end
-        end)
-        if myRegion == "??" then pcall(function()
-            local lid = (LocalizationService and LocalizationService.SystemLocaleId) or Players.LocalPlayer.LocaleId or ""
-            local r = lid:match("%-(%a%a)$") or lid:match("^(%a%a)$")
-            if r then myRegion = r:upper() end
-        end) end
-
-        -- STEP 2: Detect SERVER location (via HTTP IP geolocation)
-        pcall(function()
-            local httpGet = game.HttpGet or (HttpService and HttpService.GetAsync)
-            if not httpGet then svRegion = myRegion; return end
-
-            -- Try ip-api.com first (free, no key needed)
-            local ok, raw = pcall(function() return game:HttpGet("http://ip-api.com/json/?fields=status,country,regionName,city,countryCode") end)
-            if ok and raw and raw ~= "" then
-                local data = HttpService:JSONDecode(raw)
-                if data and data.status == "success" then
-                    local cc = data.countryCode or "??"
-                    local city = data.city or data.regionName or ""
-                    if city ~= "" then
-                        svRegion = cc .. ", " .. city
-                    else
-                        svRegion = cc
-                    end
-                    print("[Medusa] 🌍 Server: " .. svRegion)
-                    return
-                end
-            end
-
-            -- Fallback: try ipinfo.io
-            local ok2, raw2 = pcall(function() return game:HttpGet("https://ipinfo.io/json") end)
-            if ok2 and raw2 and raw2 ~= "" then
-                local data2 = HttpService:JSONDecode(raw2)
-                if data2 then
-                    local country = data2.country or "??"
-                    local city = data2.city or ""
-                    svRegion = city ~= "" and (country .. ", " .. city) or country
-                    print("[Medusa] 🌍 Server (ipinfo): " .. svRegion)
-                    return
-                end
-            end
-
-            -- Final fallback: use my region as server region
-            svRegion = myRegion ~= "??" and myRegion or "LIVE"
-        end)
-
-        if svRegion == "??" then svRegion = myRegion ~= "??" and myRegion or "LIVE" end
-        print("[Medusa] 👤 ME: " .. myRegion .. " | 🖥️ SV: " .. svRegion)
-    end)
-
     task.wait(0.5)
     pcall(function()
         if getgenv and (not getgenv().MedusaLoaded) then return end
