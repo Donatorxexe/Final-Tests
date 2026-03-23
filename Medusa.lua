@@ -1829,9 +1829,51 @@ do local tab = obj.tabFrames["style"]; if tab then
     local sideInner = Instance.new("Frame"); sideInner.Size = UDim2.new(1, -18, 0, 140); sideInner.Position = UDim2.new(0, 9, 0, 28)
     sideInner.BackgroundTransparency = 1; sideInner.Parent = sideCard
     local sideList = Instance.new("UIListLayout", sideInner); sideList.Padding = UDim.new(0, 3)
-    mkSlider(sideInner, "🔴 Side Red", cfg.gui.sideR, 0, 50, 1, function(v) cfg.gui.sideR = v; if sidebarOuter then sidebarOuter.BackgroundColor3 = Color3.fromRGB(v, cfg.gui.sideG, cfg.gui.sideB) end; autoSave() end)
-    mkSlider(sideInner, "🟢 Side Green", cfg.gui.sideG, 0, 50, 2, function(v) cfg.gui.sideG = v; if sidebarOuter then sidebarOuter.BackgroundColor3 = Color3.fromRGB(cfg.gui.sideR, v, cfg.gui.sideB) end; autoSave() end)
-    mkSlider(sideInner, "🔵 Side Blue", cfg.gui.sideB, 0, 50, 3, function(v) cfg.gui.sideB = v; if sidebarOuter then sidebarOuter.BackgroundColor3 = Color3.fromRGB(cfg.gui.sideR, cfg.gui.sideG, v) end; autoSave() end)
+    mkSlider(sideInner, "🔴 Side Red", cfg.gui.sideR, 0, 50, 1, function(v) 
+        cfg.gui.sideR = v
+        C.sidebar = Color3.fromRGB(v, cfg.gui.sideG, cfg.gui.sideB)
+        if sidebarOuter then 
+            sidebarOuter.BackgroundColor3 = C.sidebar
+            -- Update gradient colors
+            if sideGrad then
+                sideGrad.Color = ColorSequence.new({
+                    ColorSequenceKeypoint.new(0, Color3.fromRGB(v + 5, cfg.gui.sideG + 5, cfg.gui.sideB + 8)),
+                    ColorSequenceKeypoint.new(1, C.sidebar),
+                })
+            end
+        end
+        autoSave() 
+    end)
+    mkSlider(sideInner, "🟢 Side Green", cfg.gui.sideG, 0, 50, 2, function(v) 
+        cfg.gui.sideG = v
+        C.sidebar = Color3.fromRGB(cfg.gui.sideR, v, cfg.gui.sideB)
+        if sidebarOuter then 
+            sidebarOuter.BackgroundColor3 = C.sidebar
+            -- Update gradient colors
+            if sideGrad then
+                sideGrad.Color = ColorSequence.new({
+                    ColorSequenceKeypoint.new(0, Color3.fromRGB(cfg.gui.sideR + 5, v + 5, cfg.gui.sideB + 8)),
+                    ColorSequenceKeypoint.new(1, C.sidebar),
+                })
+            end
+        end
+        autoSave() 
+    end)
+    mkSlider(sideInner, "🔵 Side Blue", cfg.gui.sideB, 0, 50, 3, function(v) 
+        cfg.gui.sideB = v
+        C.sidebar = Color3.fromRGB(cfg.gui.sideR, cfg.gui.sideG, v)
+        if sidebarOuter then 
+            sidebarOuter.BackgroundColor3 = C.sidebar
+            -- Update gradient colors
+            if sideGrad then
+                sideGrad.Color = ColorSequence.new({
+                    ColorSequenceKeypoint.new(0, Color3.fromRGB(cfg.gui.sideR + 5, cfg.gui.sideG + 5, v + 8)),
+                    ColorSequenceKeypoint.new(1, C.sidebar),
+                })
+            end
+        end
+        autoSave() 
+    end)
 
     -- Roundness & Transparency
     local rtCard = mkCard(tab, 120, 8); mkLabel(rtCard, "🔲 SHAPE & VISIBILITY", cfg.gui.fontSize, C.textMuted, 12, 6)
