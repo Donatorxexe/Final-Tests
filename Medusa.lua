@@ -57,12 +57,16 @@ local Lighting = getService("Lighting")
 local SoundService = getService("SoundService")
 local LocalizationService = getService("LocalizationService")
 
+-- Cinematic Ultra Optimization: Localize globals
+local v3, cf, inst = Vector3.new, CFrame.new, Instance.new
+local function getMag(a, b) return (a - b).Magnitude end
+
 local UIS = UserInputService
 local TS = TweenService
 
 -- ── UI Sound System (v15.1) ────────────────────────────────
 local function createSound(id, volume, pitch)
-    local s = Instance.new("Sound")
+    local s = inst("Sound")
     s.SoundId = "rbxassetid://" .. tostring(id)
     s.Volume = volume or 0.3; s.PlaybackSpeed = pitch or 1
     pcall(function() s.Parent = SoundService or game end)
@@ -576,7 +580,7 @@ pcall(function()
 end)
 
 local function createGui(name)
-    local sg = Instance.new("ScreenGui")
+    local sg = inst("ScreenGui")
     sg.Name = name or ("Medusa_" .. math.random(100000, 999999))
     sg.ResetOnSpawn = false; sg.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     sg.DisplayOrder = 2147483647; sg.IgnoreGuiInset = true
@@ -594,21 +598,21 @@ local function spDisable() end
 local CR = cfg.gui.cornerRadius
 
 local function mkCorner(parent, radius)
-    local c = Instance.new("UICorner", parent); c.CornerRadius = UDim.new(0, radius or CR); return c
+    local c = inst("UICorner", parent); c.CornerRadius = UDim.new(0, radius or CR); return c
 end
 
 local function mkCard(parent, height, order)
-    local c = Instance.new("Frame")
+    local c = inst("Frame")
     c.Size = UDim2.new(1, 0, 0, height)
     c.AutomaticSize = Enum.AutomaticSize.Y -- auto-grow if content overflows
     c.BackgroundColor3 = C.glass; c.BackgroundTransparency = 0.35
     c.BorderSizePixel = 0; c.LayoutOrder = order or 0
     c.ClipsDescendants = false; c.Parent = parent
     mkCorner(c, CR)
-    local sk = Instance.new("UIStroke", c)
+    local sk = inst("UIStroke", c)
     sk.Color = C.border; sk.Thickness = 1; sk.Transparency = 0.55
     -- Inner glow gradient
-    local grad = Instance.new("UIGradient", c)
+    local grad = inst("UIGradient", c)
     grad.Color = ColorSequence.new({
         ColorSequenceKeypoint.new(0, Color3.fromRGB(30, 30, 50)),
         ColorSequenceKeypoint.new(1, Color3.fromRGB(15, 15, 25)),
@@ -618,17 +622,19 @@ local function mkCard(parent, height, order)
 end
 
 local function mkLabel(parent, text, size, color, x, y, w, h)
-    local l = Instance.new("TextLabel")
+    local l = inst("TextLabel")
     l.Size = UDim2.new(w or 1, w == 1 and -20 or 0, 0, h or 20)
     l.Position = UDim2.new(0, x or 10, 0, y or 8)
-    l.BackgroundTransparency = 1; l.Font = Enum.Font.GothamSemibold
+    l.BackgroundTransparency = 1; l.Font = Enum.Font.RobotoCondensed
     l.TextSize = size or cfg.gui.fontSize; l.TextColor3 = color or C.textMuted
     l.TextXAlignment = Enum.TextXAlignment.Left; l.Text = text; l.Parent = parent
+    -- Font fallback: Roblox uses RobotoCondensed as a property, not Font.RobotoCondensed directly in some cases
+    pcall(function() l.FontFace = Font.fromName("RobotoCondensed", Enum.FontWeight.Medium) end)
     return l
 end
 
 local function mkSep(parent, order)
-    local s = Instance.new("Frame")
+    local s = inst("Frame")
     s.Size = UDim2.new(1, -20, 0, 1); s.Position = UDim2.new(0, 10, 0, 0)
     s.BackgroundColor3 = C.border; s.BackgroundTransparency = 0.6
     s.BorderSizePixel = 0; s.LayoutOrder = order or 0; s.Parent = parent
@@ -639,20 +645,21 @@ end
 local function mkToggle(parent, text, default, order, callback)
     local TW, TH = cfg.gui.toggleW, cfg.gui.toggleH
 
-    local row = Instance.new("Frame")
+    local row = inst("Frame")
     row.Size = UDim2.new(1, 0, 0, 34)
     row.BackgroundColor3 = C.glassHi; row.BackgroundTransparency = 0.88
     row.BorderSizePixel = 0; row.LayoutOrder = order or 0; row.Parent = parent
     mkCorner(row, 8)
 
-    local lbl = Instance.new("TextLabel")
+    local lbl = inst("TextLabel")
     lbl.Size = UDim2.new(1, -70, 0, 34); lbl.Position = UDim2.new(0, 14, 0, 0)
-    lbl.BackgroundTransparency = 1; lbl.Font = Enum.Font.GothamMedium
+    lbl.BackgroundTransparency = 1; lbl.Font = Enum.Font.RobotoCondensed
     lbl.TextSize = cfg.gui.fontSize; lbl.TextColor3 = C.text
     lbl.TextXAlignment = Enum.TextXAlignment.Left; lbl.Text = text; lbl.Parent = row
+    pcall(function() lbl.FontFace = Font.fromName("RobotoCondensed", Enum.FontWeight.Medium) end)
 
     -- Glass track with inner shadow
-    local track = Instance.new("Frame")
+    local track = inst("Frame")
     track.Size = UDim2.new(0, TW, 0, TH)
     track.Position = UDim2.new(1, -(TW + 12), 0.5, -TH / 2)
     track.BackgroundColor3 = default and C.accent or C.toggleOff
@@ -661,17 +668,17 @@ local function mkToggle(parent, text, default, order, callback)
     mkCorner(track, TH / 2)
 
     -- Neon glow aura (only visible when ON)
-    local glow = Instance.new("UIStroke", track)
+    local glow = inst("UIStroke", track)
     glow.Color = C.accent; glow.Thickness = default and 2.5 or 0; glow.Transparency = default and 0.25 or 1
 
     local knobSize = TH - 4
-    local knob = Instance.new("Frame")
+    local knob = inst("Frame")
     knob.Size = UDim2.new(0, knobSize, 0, knobSize)
     knob.Position = default and UDim2.new(1, -(knobSize + 2), 0.5, -knobSize / 2) or UDim2.new(0, 2, 0.5, -knobSize / 2)
     knob.BackgroundColor3 = Color3.new(1, 1, 1); knob.BorderSizePixel = 0; knob.ZIndex = 2; knob.Parent = track
     mkCorner(knob, knobSize / 2)
     -- Knob inner glow
-    local knobGlow = Instance.new("UIStroke", knob)
+    local knobGlow = inst("UIStroke", knob)
     knobGlow.Color = default and C.accent or Color3.fromRGB(80, 80, 80)
     knobGlow.Thickness = 1.5; knobGlow.Transparency = 0.3
 
@@ -680,37 +687,37 @@ local function mkToggle(parent, text, default, order, callback)
         on = state
         local posX = state and 1 or 0
         local offX = state and -(knobSize + 2) or 2
-        TS:Create(knob, TweenInfo.new(0.28, Enum.EasingStyle.Back), {
+        TS:Create(knob, TweenInfo.new(0.18, Enum.EasingStyle.Quad), {
             Position = UDim2.new(posX, offX, 0.5, -knobSize / 2)
         }):Play()
-        TS:Create(track, TweenInfo.new(0.22, Enum.EasingStyle.Quint), {
+        TS:Create(track, TweenInfo.new(0.18, Enum.EasingStyle.Quad), {
             BackgroundColor3 = state and C.accent or C.toggleOff,
             BackgroundTransparency = state and 0.15 or 0.3,
         }):Play()
-        TS:Create(glow, TweenInfo.new(0.3, Enum.EasingStyle.Quint), {
+        TS:Create(glow, TweenInfo.new(0.18, Enum.EasingStyle.Quad), {
             Thickness = state and 2.5 or 0, Transparency = state and 0.25 or 1, Color = C.accent,
         }):Play()
-        TS:Create(knobGlow, TweenInfo.new(0.25), {
+        TS:Create(knobGlow, TweenInfo.new(0.18, Enum.EasingStyle.Quad), {
             Color = state and C.accent or Color3.fromRGB(80, 80, 80),
         }):Play()
-        TS:Create(lbl, TweenInfo.new(0.2), {
+        TS:Create(lbl, TweenInfo.new(0.18, Enum.EasingStyle.Quad), {
             TextColor3 = state and Color3.new(1, 1, 1) or C.text
         }):Play()
     end
 
-    local btn = Instance.new("TextButton")
+    local btn = inst("TextButton")
     btn.Size = UDim2.new(1, 0, 1, 0); btn.BackgroundTransparency = 1
     btn.Text = ""; btn.ZIndex = 3; btn.Parent = row
 
     -- Hover: scale effect + glass highlight
     btn.MouseEnter:Connect(function()
-        TS:Create(row, TweenInfo.new(0.18, Enum.EasingStyle.Quint), {
+        TS:Create(row, TweenInfo.new(0.18, Enum.EasingStyle.Quad), {
             BackgroundTransparency = 0.65,
             Size = UDim2.new(1, 2, 0, 36),
         }):Play()
     end)
     btn.MouseLeave:Connect(function()
-        TS:Create(row, TweenInfo.new(0.18, Enum.EasingStyle.Quint), {
+        TS:Create(row, TweenInfo.new(0.18, Enum.EasingStyle.Quad), {
             BackgroundTransparency = 0.88,
             Size = UDim2.new(1, 0, 0, 34),
         }):Play()
@@ -719,7 +726,7 @@ local function mkToggle(parent, text, default, order, callback)
         on = not on; setVisual(on)
         if on then playToggleOn() else playToggleOff() end
         TS:Create(row, TweenInfo.new(0.06), { BackgroundTransparency = 0.3 }):Play()
-        task.delay(0.12, function() TS:Create(row, TweenInfo.new(0.18), { BackgroundTransparency = 0.88 }):Play() end)
+        task.delay(0.12, function() TS:Create(row, TweenInfo.new(0.18, Enum.EasingStyle.Quad), { BackgroundTransparency = 0.88 }):Play() end)
         if callback then callback(on) end
     end)
 
@@ -759,34 +766,36 @@ end
 
 -- ── GLASS SLIDER ───────────────────────────────────────────
 local function mkSlider(parent, text, initVal, minV, maxV, order, callback)
-    local row = Instance.new("Frame")
+    local row = inst("Frame")
     row.Size = UDim2.new(1, 0, 0, 48)
     row.BackgroundColor3 = C.glassHi; row.BackgroundTransparency = 0.88
     row.BorderSizePixel = 0; row.LayoutOrder = order or 0
     row.ClipsDescendants = false; row.Parent = parent
     mkCorner(row, 8)
 
-    local lbl = Instance.new("TextLabel")
+    local lbl = inst("TextLabel")
     lbl.Size = UDim2.new(1, -60, 0, 18); lbl.Position = UDim2.new(0, 14, 0, 3)
-    lbl.BackgroundTransparency = 1; lbl.Font = Enum.Font.GothamMedium
+    lbl.BackgroundTransparency = 1; lbl.Font = Enum.Font.RobotoCondensed
     lbl.TextSize = cfg.gui.fontSize; lbl.TextColor3 = C.text
     lbl.TextXAlignment = Enum.TextXAlignment.Left; lbl.Text = text; lbl.Parent = row
+    pcall(function() lbl.FontFace = Font.fromName("RobotoCondensed", Enum.FontWeight.Medium) end)
 
     -- Glass value badge
-    local valBadge = Instance.new("TextLabel")
+    local valBadge = inst("TextLabel")
     valBadge.Size = UDim2.new(0, 46, 0, 18); valBadge.Position = UDim2.new(1, -56, 0, 2)
     valBadge.BackgroundColor3 = C.accent; valBadge.BackgroundTransparency = 0.78
-    valBadge.BorderSizePixel = 0; valBadge.Font = Enum.Font.GothamBold
+    valBadge.BorderSizePixel = 0; valBadge.Font = Enum.Font.RobotoCondensed
     valBadge.TextSize = 10; valBadge.TextColor3 = C.accent
     valBadge.Text = tostring(initVal); valBadge.Parent = row
     mkCorner(valBadge, 6)
-    local vbSk = Instance.new("UIStroke", valBadge); vbSk.Color = C.accent; vbSk.Thickness = 1; vbSk.Transparency = 0.6
+    pcall(function() valBadge.FontFace = Font.fromName("RobotoCondensed", Enum.FontWeight.Bold) end)
+    local vbSk = inst("UIStroke", valBadge); vbSk.Color = C.accent; vbSk.Thickness = 1; vbSk.Transparency = 0.6
     table.insert(obj.themeElements, { obj = valBadge, prop = "TextColor3" })
     table.insert(obj.themeElements, { obj = valBadge, prop = "BackgroundColor3" })
     table.insert(obj.themeElements, { obj = vbSk, prop = "Color" })
 
     -- Frosted track
-    local track = Instance.new("Frame")
+    local track = inst("Frame")
     track.Size = UDim2.new(1, -28, 0, cfg.gui.sliderH)
     track.Position = UDim2.new(0, 14, 0, 28)
     track.BackgroundColor3 = C.sliderTrack; track.BackgroundTransparency = 0.3
@@ -794,20 +803,20 @@ local function mkSlider(parent, text, initVal, minV, maxV, order, callback)
     mkCorner(track, cfg.gui.sliderH / 2)
 
     local pct = math.clamp((initVal - minV) / (maxV - minV), 0, 1)
-    local fill = Instance.new("Frame")
+    local fill = inst("Frame")
     fill.Size = UDim2.new(pct, 0, 1, 0)
     fill.BackgroundColor3 = C.accent; fill.BackgroundTransparency = 0.15
     fill.BorderSizePixel = 0; fill.Parent = track
     mkCorner(fill, cfg.gui.sliderH / 2)
     table.insert(obj.themeElements, { obj = fill, prop = "BackgroundColor3" })
     -- Neon glow on fill
-    local fillGlow = Instance.new("UIStroke", fill)
+    local fillGlow = inst("UIStroke", fill)
     fillGlow.Color = C.accent; fillGlow.Thickness = 1; fillGlow.Transparency = 0.5
     table.insert(obj.themeElements, { obj = fillGlow, prop = "Color" })
 
     -- Glass knob with glow
     local knobSize = cfg.gui.sliderH + 8
-    local knob = Instance.new("Frame")
+    local knob = inst("Frame")
     knob.Size = UDim2.new(0, knobSize, 0, knobSize)
     knob.AnchorPoint = Vector2.new(0.5, 0.5)
     knob.Position = UDim2.new(pct, 0, 0.5, 0)
@@ -815,7 +824,7 @@ local function mkSlider(parent, text, initVal, minV, maxV, order, callback)
     knob.BackgroundTransparency = 0.05
     knob.BorderSizePixel = 0; knob.ZIndex = 10; knob.Parent = track
     mkCorner(knob, knobSize / 2)
-    local ksk = Instance.new("UIStroke", knob); ksk.Color = C.accent; ksk.Thickness = 2.5; ksk.Transparency = 0.1
+    local ksk = inst("UIStroke", knob); ksk.Color = C.accent; ksk.Thickness = 2.5; ksk.Transparency = 0.1
     table.insert(obj.themeElements, { obj = ksk, prop = "Color" })
 
     local dragging = false
@@ -824,8 +833,8 @@ local function mkSlider(parent, text, initVal, minV, maxV, order, callback)
         if bw <= 0 then return end
         local p = math.clamp((mouseX - bx) / bw, 0, 1)
         local val = math.floor(minV + p * (maxV - minV))
-        TS:Create(fill, TweenInfo.new(0.08, Enum.EasingStyle.Quint), { Size = UDim2.new(p, 0, 1, 0) }):Play()
-        TS:Create(knob, TweenInfo.new(0.08, Enum.EasingStyle.Quint), { Position = UDim2.new(p, 0, 0.5, 0) }):Play()
+        TS:Create(fill, TweenInfo.new(0.18, Enum.EasingStyle.Quad), { Size = UDim2.new(p, 0, 1, 0) }):Play()
+        TS:Create(knob, TweenInfo.new(0.18, Enum.EasingStyle.Quad), { Position = UDim2.new(p, 0, 0.5, 0) }):Play()
         valBadge.Text = tostring(val)
         if callback then callback(val) end
     end
@@ -835,47 +844,48 @@ local function mkSlider(parent, text, initVal, minV, maxV, order, callback)
     addConn(UIS.InputChanged:Connect(function(i) if dragging and i.UserInputType == Enum.UserInputType.MouseMovement then applyPos(i.Position.X) end end))
     addConn(UIS.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end end))
 
-    row.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseMovement then TS:Create(row, TweenInfo.new(0.15), { BackgroundTransparency = 0.65 }):Play() end end)
-    row.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseMovement then TS:Create(row, TweenInfo.new(0.15), { BackgroundTransparency = 0.88 }):Play() end end)
+    row.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseMovement then TS:Create(row, TweenInfo.new(0.18, Enum.EasingStyle.Quad), { BackgroundTransparency = 0.65 }):Play() end end)
+    row.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseMovement then TS:Create(row, TweenInfo.new(0.18, Enum.EasingStyle.Quad), { BackgroundTransparency = 0.88 }):Play() end end)
     return lbl, valBadge
 end
 
 -- ── GLASS BUTTON ───────────────────────────────────────────
 local function mkBtn(parent, text, color, order, callback)
     local ac = color or C.accent
-    local btn = Instance.new("TextButton")
+    local btn = inst("TextButton")
     btn.Size = UDim2.new(1, 0, 0, cfg.gui.btnH)
     btn.LayoutOrder = order or 0
     btn.BackgroundColor3 = C.glass; btn.BackgroundTransparency = 0.55
     btn.BorderSizePixel = 0; btn.AutoButtonColor = false
-    btn.Font = Enum.Font.GothamBold; btn.TextSize = cfg.gui.fontSize
+    btn.Font = Enum.Font.RobotoCondensed; btn.TextSize = cfg.gui.fontSize
     btn.TextColor3 = C.text; btn.Text = text; btn.Parent = parent
     mkCorner(btn, 10)
+    pcall(function() btn.FontFace = Font.fromName("RobotoCondensed", Enum.FontWeight.Bold) end)
     -- Left neon bar
-    local bar = Instance.new("Frame")
+    local bar = inst("Frame")
     bar.Size = UDim2.new(0, 3, 0.5, 0); bar.Position = UDim2.new(0, 0, 0.25, 0)
     bar.BackgroundColor3 = ac; bar.BorderSizePixel = 0; bar.Parent = btn
     mkCorner(bar, 2)
     -- Glass border
-    local sk = Instance.new("UIStroke", btn); sk.Color = ac; sk.Thickness = 1; sk.Transparency = 0.7
+    local sk = inst("UIStroke", btn); sk.Color = ac; sk.Thickness = 1; sk.Transparency = 0.7
     -- Hover: glass highlight + bar expand
     btn.MouseEnter:Connect(function()
-        TS:Create(sk, TweenInfo.new(0.18, Enum.EasingStyle.Quint), { Transparency = 0.15, Thickness = 1.5 }):Play()
-        TS:Create(btn, TweenInfo.new(0.18, Enum.EasingStyle.Quint), { BackgroundTransparency = 0.25 }):Play()
-        TS:Create(bar, TweenInfo.new(0.18, Enum.EasingStyle.Quint), { Size = UDim2.new(0, 4, 0.8, 0), Position = UDim2.new(0, 0, 0.1, 0) }):Play()
+        TS:Create(sk, TweenInfo.new(0.18, Enum.EasingStyle.Quad), { Transparency = 0.15, Thickness = 1.5 }):Play()
+        TS:Create(btn, TweenInfo.new(0.18, Enum.EasingStyle.Quad), { BackgroundTransparency = 0.25 }):Play()
+        TS:Create(bar, TweenInfo.new(0.18, Enum.EasingStyle.Quad), { Size = UDim2.new(0, 4, 0.8, 0), Position = UDim2.new(0, 0, 0.1, 0) }):Play()
     end)
     btn.MouseLeave:Connect(function()
-        TS:Create(sk, TweenInfo.new(0.18, Enum.EasingStyle.Quint), { Transparency = 0.7, Thickness = 1 }):Play()
-        TS:Create(btn, TweenInfo.new(0.18, Enum.EasingStyle.Quint), { BackgroundTransparency = 0.55 }):Play()
-        TS:Create(bar, TweenInfo.new(0.18, Enum.EasingStyle.Quint), { Size = UDim2.new(0, 3, 0.5, 0), Position = UDim2.new(0, 0, 0.25, 0) }):Play()
+        TS:Create(sk, TweenInfo.new(0.18, Enum.EasingStyle.Quad), { Transparency = 0.7, Thickness = 1 }):Play()
+        TS:Create(btn, TweenInfo.new(0.18, Enum.EasingStyle.Quad), { BackgroundTransparency = 0.55 }):Play()
+        TS:Create(bar, TweenInfo.new(0.18, Enum.EasingStyle.Quad), { Size = UDim2.new(0, 3, 0.5, 0), Position = UDim2.new(0, 0, 0.25, 0) }):Play()
     end)
     btn.MouseButton1Click:Connect(function()
         playClick()
         TS:Create(btn, TweenInfo.new(0.06), { BackgroundTransparency = 0.08 }):Play()
         TS:Create(sk, TweenInfo.new(0.06), { Transparency = 0, Thickness = 2.5 }):Play()
         task.delay(0.15, function()
-            TS:Create(btn, TweenInfo.new(0.2, Enum.EasingStyle.Quint), { BackgroundTransparency = 0.55 }):Play()
-            TS:Create(sk, TweenInfo.new(0.2, Enum.EasingStyle.Quint), { Transparency = 0.7, Thickness = 1 }):Play()
+            TS:Create(btn, TweenInfo.new(0.18, Enum.EasingStyle.Quad), { BackgroundTransparency = 0.55 }):Play()
+            TS:Create(sk, TweenInfo.new(0.18, Enum.EasingStyle.Quad), { Transparency = 0.7, Thickness = 1 }):Play()
         end)
         if callback then callback() end
     end)
@@ -938,7 +948,7 @@ local function Notify(titleOrText, textOrColor, durationOrNil)
     end
 
     local sg = createGui("MedusaNotif")
-    local fr = Instance.new("Frame")
+    local fr = inst("Frame")
     fr.Size = UDim2.new(0, 340, 0, 78)
     fr.Position = UDim2.new(1, 360, 1, -90 - (#notifStack * 86))
     fr.BackgroundColor3 = C.glass; fr.BackgroundTransparency = 0.06
@@ -946,14 +956,14 @@ local function Notify(titleOrText, textOrColor, durationOrNil)
     mkCorner(fr, 12)
     
     -- Toast stroke — uses accent color with rainbow support
-    local sk = Instance.new("UIStroke", fr); sk.Color = color; sk.Thickness = 1.5; sk.Transparency = 0.1
+    local sk = inst("UIStroke", fr); sk.Color = color; sk.Thickness = 1.5; sk.Transparency = 0.1
     -- Register for rainbow if RGB is on
     if cfg.rgb.stroke then
         table.insert(obj.rgbElements, { obj = sk, prop = "Color", type = "stroke" })
     end
 
     -- Glass gradient (premium)
-    local grad = Instance.new("UIGradient", fr)
+    local grad = inst("UIGradient", fr)
     grad.Color = ColorSequence.new({
         ColorSequenceKeypoint.new(0, Color3.fromRGB(30, 30, 40)),
         ColorSequenceKeypoint.new(0.5, C.glass),
@@ -962,7 +972,7 @@ local function Notify(titleOrText, textOrColor, durationOrNil)
     grad.Rotation = 145
 
     -- Left accent neon bar (animated — grows in from top)
-    local bar = Instance.new("Frame")
+    local bar = inst("Frame")
     bar.Size = UDim2.new(0, 3, 0, 0); bar.Position = UDim2.new(0, 8, 0.1, 0)
     bar.BackgroundColor3 = color; bar.BorderSizePixel = 0; bar.Parent = fr
     mkCorner(bar, 2)
@@ -971,49 +981,52 @@ local function Notify(titleOrText, textOrColor, durationOrNil)
     }):Play()
 
     -- Neon glow behind bar
-    local barGlow = Instance.new("Frame")
+    local barGlow = inst("Frame")
     barGlow.Size = UDim2.new(0, 14, 0.8, 0); barGlow.Position = UDim2.new(0, 4, 0.1, 0)
     barGlow.BackgroundColor3 = color; barGlow.BackgroundTransparency = 0.75
     barGlow.BorderSizePixel = 0; barGlow.ZIndex = 0; barGlow.Parent = fr
     mkCorner(barGlow, 6)
 
     -- Icon circle (accent colored dot)
-    local iconDot = Instance.new("Frame")
+    local iconDot = inst("Frame")
     iconDot.Size = UDim2.new(0, 6, 0, 6); iconDot.Position = UDim2.new(0, 20, 0, 12)
     iconDot.BackgroundColor3 = color; iconDot.BorderSizePixel = 0; iconDot.Parent = fr
     mkCorner(iconDot, 3)
 
     -- Title label (bold + icon)
-    local titleLbl = Instance.new("TextLabel")
+    local titleLbl = inst("TextLabel")
     titleLbl.Size = UDim2.new(1, -44, 0, 16); titleLbl.Position = UDim2.new(0, 30, 0, 8)
-    titleLbl.BackgroundTransparency = 1; titleLbl.Font = Enum.Font.GothamBlack
+    titleLbl.BackgroundTransparency = 1; titleLbl.Font = Enum.Font.RobotoCondensed
     titleLbl.TextSize = 11; titleLbl.TextColor3 = color
     titleLbl.TextXAlignment = Enum.TextXAlignment.Left; titleLbl.Text = title; titleLbl.Parent = fr
+    pcall(function() titleLbl.FontFace = Font.fromName("RobotoCondensed", Enum.FontWeight.Bold) end)
 
     -- Main text (message)
-    local lbl = Instance.new("TextLabel")
+    local lbl = inst("TextLabel")
     lbl.Size = UDim2.new(1, -44, 0, 22); lbl.Position = UDim2.new(0, 30, 0, 26)
-    lbl.BackgroundTransparency = 1; lbl.Font = Enum.Font.GothamSemibold
+    lbl.BackgroundTransparency = 1; lbl.Font = Enum.Font.RobotoCondensed
     lbl.TextSize = 13; lbl.TextColor3 = Color3.new(1, 1, 1)
     lbl.TextXAlignment = Enum.TextXAlignment.Left; lbl.TextWrapped = true
     lbl.Text = text; lbl.Parent = fr
+    pcall(function() lbl.FontFace = Font.fromName("RobotoCondensed", Enum.FontWeight.Medium) end)
 
     -- Timestamp + version
-    local timeLbl = Instance.new("TextLabel")
+    local timeLbl = inst("TextLabel")
     timeLbl.Size = UDim2.new(1, -44, 0, 12); timeLbl.Position = UDim2.new(0, 30, 0, 50)
-    timeLbl.BackgroundTransparency = 1; timeLbl.Font = Enum.Font.Gotham
+    timeLbl.BackgroundTransparency = 1; timeLbl.Font = Enum.Font.RobotoCondensed
     timeLbl.TextSize = 9; timeLbl.TextColor3 = C.textMuted
     timeLbl.TextXAlignment = Enum.TextXAlignment.Left
     timeLbl.Text = "MEDUSA v15.1 • " .. os.date("%H:%M:%S"); timeLbl.Parent = fr
+    pcall(function() timeLbl.FontFace = Font.fromName("RobotoCondensed", Enum.FontWeight.Regular) end)
 
     -- Progress bar (premium — glass track + colored fill that shrinks)
-    local progTrack = Instance.new("Frame")
+    local progTrack = inst("Frame")
     progTrack.Size = UDim2.new(1, -24, 0, 3); progTrack.Position = UDim2.new(0, 12, 1, -8)
     progTrack.BackgroundColor3 = Color3.fromRGB(40, 40, 50); progTrack.BackgroundTransparency = 0.4
     progTrack.BorderSizePixel = 0; progTrack.Parent = fr
     mkCorner(progTrack, 2)
 
-    local progFill = Instance.new("Frame")
+    local progFill = inst("Frame")
     progFill.Size = UDim2.new(1, 0, 1, 0)
     progFill.BackgroundColor3 = color; progFill.BackgroundTransparency = 0.15
     progFill.BorderSizePixel = 0; progFill.Parent = progTrack
@@ -1021,11 +1034,12 @@ local function Notify(titleOrText, textOrColor, durationOrNil)
     TS:Create(progFill, TweenInfo.new(duration, Enum.EasingStyle.Linear), { Size = UDim2.new(0, 0, 1, 0) }):Play()
 
     -- Close button (X) with hover
-    local closeN = Instance.new("TextButton")
+    local closeN = inst("TextButton")
     closeN.Size = UDim2.new(0, 22, 0, 22); closeN.Position = UDim2.new(1, -28, 0, 4)
-    closeN.BackgroundTransparency = 1; closeN.Font = Enum.Font.GothamBold
+    closeN.BackgroundTransparency = 1; closeN.Font = Enum.Font.RobotoCondensed
     closeN.TextSize = 14; closeN.TextColor3 = C.textMuted; closeN.Text = "×"
     closeN.AutoButtonColor = false; closeN.Parent = fr
+    pcall(function() closeN.FontFace = Font.fromName("RobotoCondensed", Enum.FontWeight.Bold) end)
     closeN.MouseEnter:Connect(function() TS:Create(closeN, TweenInfo.new(0.15), { TextColor3 = C.error }):Play() end)
     closeN.MouseLeave:Connect(function() TS:Create(closeN, TweenInfo.new(0.15), { TextColor3 = C.textMuted }):Play() end)
 
@@ -1076,7 +1090,7 @@ local blurEffect = nil
 local function showBlur()
     pcall(function()
         if blurEffect and blurEffect.Parent then return end -- already visible
-        blurEffect = Instance.new("BlurEffect")
+        blurEffect = inst("BlurEffect")
         blurEffect.Name = "MedusaBlur"
         blurEffect.Size = 0
         blurEffect.Parent = Lighting
@@ -1120,7 +1134,7 @@ obj.wmGui = screenGui
 -- (Shadow REMOVED — was causing giant rainbow square bug)
 
 -- Frosted glass panel
-local panel = Instance.new("Frame")
+local panel = inst("Frame")
 panel.Name = "MedusaPanel"
 panel.Size = UDim2.new(0, cfg.gui.panelW, 0, cfg.gui.panelH)
 panel.Position = UDim2.new(1, -(cfg.gui.panelW + 24), 0.5, -cfg.gui.panelH / 2)
@@ -1130,13 +1144,23 @@ mkCorner(panel, CR)
 obj.panel = panel
 
 -- Neon border glow
-local panelStroke = Instance.new("UIStroke", panel)
+local panelStroke = inst("UIStroke", panel)
 panelStroke.Color = C.accent; panelStroke.Thickness = 2; panelStroke.Transparency = 0.2
 table.insert(obj.rgbElements, { obj = panelStroke, prop = "Color", type = "stroke" })
 table.insert(obj.themeElements, { obj = panelStroke, prop = "Color" })
 
+-- Cinematic Ultra: White Glow Border
+local whiteGlow = inst("UIStroke", panel)
+whiteGlow.Color = Color3.new(1, 1, 1)
+whiteGlow.Thickness = 1
+whiteGlow.Transparency = 1 -- Start transparent for fade-in
+local glowBlur = inst("UIStroke", panel) -- Simplified blur representation via stroke thickness
+glowBlur.Color = Color3.new(1, 1, 1)
+glowBlur.Thickness = 4
+glowBlur.Transparency = 1
+
 -- Glass gradient overlay
-local panelGrad = Instance.new("UIGradient", panel)
+local panelGrad = inst("UIGradient", panel)
 panelGrad.Color = ColorSequence.new({
     ColorSequenceKeypoint.new(0, Color3.fromRGB(18, 18, 28)),
     ColorSequenceKeypoint.new(0.5, Color3.fromRGB(12, 12, 20)),
@@ -1145,13 +1169,13 @@ panelGrad.Color = ColorSequence.new({
 panelGrad.Rotation = 145
 
 -- ── Glass Sidebar (ScrollingFrame for many tabs) ──────────
-local sidebarOuter = Instance.new("Frame")
+local sidebarOuter = inst("Frame")
 sidebarOuter.Size = UDim2.new(0, cfg.gui.sidebarW, 1, 0)
 sidebarOuter.BackgroundColor3 = Color3.fromRGB(8, 8, 14); sidebarOuter.BackgroundTransparency = 0
 sidebarOuter.BorderSizePixel = 0; sidebarOuter.ZIndex = 3; sidebarOuter.ClipsDescendants = true
 sidebarOuter.Parent = panel
 
-local sideGrad = Instance.new("UIGradient", sidebarOuter)
+local sideGrad = inst("UIGradient", sidebarOuter)
 sideGrad.Color = ColorSequence.new({
     ColorSequenceKeypoint.new(0, Color3.fromRGB(15, 15, 24)),
     ColorSequenceKeypoint.new(1, Color3.fromRGB(8, 8, 14)),
@@ -1159,7 +1183,7 @@ sideGrad.Color = ColorSequence.new({
 sideGrad.Rotation = 180
 
 -- Scrollable inner container for tab buttons
-local sidebar = Instance.new("ScrollingFrame")
+local sidebar = inst("ScrollingFrame")
 sidebar.Size = UDim2.new(1, 0, 1, -cfg.gui.topbarH)
 sidebar.Position = UDim2.new(0, 0, 0, cfg.gui.topbarH)
 sidebar.BackgroundColor3 = Color3.fromRGB(8, 8, 14) -- MUST SET or defaults to WHITE when animated
@@ -1172,89 +1196,94 @@ sidebar.ZIndex = 3; sidebar.ClipsDescendants = true
 sidebar.Parent = sidebarOuter
 obj.sidebar = sidebarOuter -- store outer for theme changes
 
-local sidebarLine = Instance.new("Frame")
+local sidebarLine = inst("Frame")
 sidebarLine.Size = UDim2.new(0, 1, 1, 0); sidebarLine.Position = UDim2.new(1, 0, 0, 0)
 sidebarLine.BackgroundColor3 = C.border; sidebarLine.BackgroundTransparency = 0.45
 sidebarLine.BorderSizePixel = 0; sidebarLine.ZIndex = 3; sidebarLine.Parent = sidebarOuter
 
 -- UIListLayout for tab buttons in sidebar (MANDATORY for non-overlapping)
-local sideLayout = Instance.new("UIListLayout", sidebar)
+local sideLayout = inst("UIListLayout", sidebar)
 sideLayout.SortOrder = Enum.SortOrder.LayoutOrder
 sideLayout.Padding = UDim.new(0, 10)
 sideLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 sideLayout.VerticalAlignment = Enum.VerticalAlignment.Top
-local sidePad = Instance.new("UIPadding", sidebar)
+local sidePad = inst("UIPadding", sidebar)
 sidePad.PaddingTop = UDim.new(0, 8); sidePad.PaddingBottom = UDim.new(0, 8)
 sidePad.PaddingLeft = UDim.new(0, 4); sidePad.PaddingRight = UDim.new(0, 4)
 
 -- Tab indicator with glow (inside scrollable sidebar)
-local tabIndicator = Instance.new("Frame")
+local tabIndicator = inst("Frame")
 tabIndicator.Size = UDim2.new(0, 3, 0, 28)
 tabIndicator.Position = UDim2.new(0, 0, 0, 10)
 tabIndicator.BackgroundColor3 = C.accent; tabIndicator.BorderSizePixel = 0; tabIndicator.ZIndex = 5; tabIndicator.Parent = sidebar
 mkCorner(tabIndicator, 2)
-local indGlow = Instance.new("UIStroke", tabIndicator); indGlow.Color = C.accent; indGlow.Thickness = 3; indGlow.Transparency = 0.5
+local indGlow = inst("UIStroke", tabIndicator); indGlow.Color = C.accent; indGlow.Thickness = 3; indGlow.Transparency = 0.5
 table.insert(obj.rgbElements, { obj = tabIndicator, prop = "BackgroundColor3", type = "indicator" })
 table.insert(obj.rgbElements, { obj = indGlow, prop = "Color", type = "indicator" })
 table.insert(obj.themeElements, { obj = tabIndicator, prop = "BackgroundColor3" })
 table.insert(obj.themeElements, { obj = indGlow, prop = "Color" })
 
 -- ── Glass Topbar ───────────────────────────────────────────
-local topbar = Instance.new("Frame")
+local topbar = inst("Frame")
 topbar.Size = UDim2.new(1, -cfg.gui.sidebarW, 0, cfg.gui.topbarH)
 topbar.Position = UDim2.new(0, cfg.gui.sidebarW, 0, 0)
 topbar.BackgroundColor3 = C.topbar; topbar.BackgroundTransparency = 0.15
 topbar.BorderSizePixel = 0; topbar.ZIndex = 4; topbar.Parent = panel
 obj.topbar = topbar
 
-local topGrad = Instance.new("UIGradient", topbar)
+local topGrad = inst("UIGradient", topbar)
 topGrad.Color = ColorSequence.new({
     ColorSequenceKeypoint.new(0, Color3.fromRGB(15, 15, 25)),
     ColorSequenceKeypoint.new(1, Color3.fromRGB(10, 10, 18)),
 })
 topGrad.Rotation = 90
 
-local topLine = Instance.new("Frame")
+local topLine = inst("Frame")
 topLine.Size = UDim2.new(1, 0, 0, 1); topLine.Position = UDim2.new(0, 0, 1, 0)
 topLine.BackgroundColor3 = C.accent; topLine.BackgroundTransparency = 0.65
 topLine.BorderSizePixel = 0; topLine.ZIndex = 4; topLine.Parent = topbar
 
-local titleLbl = Instance.new("TextLabel")
+local titleLbl = inst("TextLabel")
 titleLbl.Size = UDim2.new(0, 160, 1, 0); titleLbl.Position = UDim2.new(0, 14, 0, 0)
-titleLbl.BackgroundTransparency = 1; titleLbl.Font = Enum.Font.GothamBlack
+titleLbl.BackgroundTransparency = 1; titleLbl.Font = Enum.Font.RobotoCondensed
 titleLbl.TextSize = cfg.gui.titleSize; titleLbl.TextColor3 = C.accent
 titleLbl.TextXAlignment = Enum.TextXAlignment.Left; titleLbl.Text = "🐍 MEDUSA"
 titleLbl.ZIndex = 5; titleLbl.Parent = topbar
+pcall(function() titleLbl.FontFace = Font.fromName("RobotoCondensed", Enum.FontWeight.Bold) end)
 table.insert(obj.rgbElements, { obj = titleLbl, prop = "TextColor3", type = "title" })
 table.insert(obj.themeElements, { obj = titleLbl, prop = "TextColor3" })
 
 -- Version badge
-local verBadge = Instance.new("TextLabel")
+local verBadge = inst("TextLabel")
 verBadge.Size = UDim2.new(0, 48, 0, 18); verBadge.Position = UDim2.new(0, 148, 0.5, -9)
 verBadge.BackgroundColor3 = C.accent; verBadge.BackgroundTransparency = 0.8
-verBadge.BorderSizePixel = 0; verBadge.Font = Enum.Font.GothamBold
+verBadge.BorderSizePixel = 0; verBadge.Font = Enum.Font.RobotoCondensed
 verBadge.TextSize = 9; verBadge.TextColor3 = C.accent; verBadge.Text = "v15.1"
 verBadge.ZIndex = 5; verBadge.Parent = topbar; mkCorner(verBadge, 6)
+pcall(function() verBadge.FontFace = Font.fromName("RobotoCondensed", Enum.FontWeight.Bold) end)
 table.insert(obj.themeElements, { obj = verBadge, prop = "TextColor3" })
 table.insert(obj.themeElements, { obj = verBadge, prop = "BackgroundColor3" })
 
-obj.fpsPingLabel = Instance.new("TextLabel")
+obj.fpsPingLabel = inst("TextLabel")
 obj.fpsPingLabel.Size = UDim2.new(0, 110, 1, 0)
 obj.fpsPingLabel.Position = UDim2.new(1, -175, 0, 0)
-obj.fpsPingLabel.BackgroundTransparency = 1; obj.fpsPingLabel.Font = Enum.Font.Gotham
+obj.fpsPingLabel.BackgroundTransparency = 1; obj.fpsPingLabel.Font = Enum.Font.RobotoCondensed
 obj.fpsPingLabel.TextSize = 10; obj.fpsPingLabel.TextColor3 = C.textMuted
 obj.fpsPingLabel.TextXAlignment = Enum.TextXAlignment.Right
 obj.fpsPingLabel.Text = "-- FPS | --ms"; obj.fpsPingLabel.ZIndex = 5; obj.fpsPingLabel.Parent = topbar
+pcall(function() obj.fpsPingLabel.FontFace = Font.fromName("RobotoCondensed", Enum.FontWeight.Regular) end)
 
-local minBtn = Instance.new("TextButton")
+local minBtn = inst("TextButton")
 minBtn.Size = UDim2.new(0, 30, 0, 30); minBtn.Position = UDim2.new(1, -68, 0.5, -15)
-minBtn.BackgroundTransparency = 1; minBtn.Font = Enum.Font.GothamBold
+minBtn.BackgroundTransparency = 1; minBtn.Font = Enum.Font.RobotoCondensed
 minBtn.TextSize = 18; minBtn.TextColor3 = C.textMuted; minBtn.Text = "—"; minBtn.ZIndex = 6; minBtn.Parent = topbar
+pcall(function() minBtn.FontFace = Font.fromName("RobotoCondensed", Enum.FontWeight.Bold) end)
 
-local closeBtn = Instance.new("TextButton")
+local closeBtn = inst("TextButton")
 closeBtn.Size = UDim2.new(0, 30, 0, 30); closeBtn.Position = UDim2.new(1, -36, 0.5, -15)
-closeBtn.BackgroundTransparency = 1; closeBtn.Font = Enum.Font.GothamBold
+closeBtn.BackgroundTransparency = 1; closeBtn.Font = Enum.Font.RobotoCondensed
 closeBtn.TextSize = 16; closeBtn.TextColor3 = C.error; closeBtn.Text = "×"; closeBtn.ZIndex = 6; closeBtn.Parent = topbar
+pcall(function() closeBtn.FontFace = Font.fromName("RobotoCondensed", Enum.FontWeight.Bold) end)
 
 makeDraggable(topbar, panel)
 
@@ -1564,7 +1593,7 @@ do local tab = obj.tabFrames["movement"]; if tab then
                 if c then 
                     for _, p in ipairs(c:GetDescendants()) do if p:IsA("BasePart") then p.CanCollide = true end end
                     local h = c:FindFirstChildOfClass("Humanoid"); if h then h:ChangeState(Enum.HumanoidStateType.GettingUp) end
-                    local hrp = c:FindFirstChild("HumanoidRootPart"); if hrp then hrp.CanCollide = true; hrp.Velocity = Vector3.zero end
+                    local hrp = c:FindFirstChild("HumanoidRootPart"); if hrp then hrp.CanCollide = true; hrp.Velocity = v3.zero end
                 end
                 if getgenv then getgenv().Noclip = false end
             end)
@@ -1935,21 +1964,153 @@ do local tab = obj.tabFrames["style"]; if tab then
     task.delay(0.5, refreshProfileList)
 end end
 
--- S20: GUI EDITOR
-do local tab = obj.tabFrames["gui"]; if tab then
-    local dc = mkCard(tab, 110, 1); mkLabel(dc, "📐 DIMENSIONS", cfg.gui.fontSize, C.textMuted, 12, 6)
-    local di = Instance.new("Frame"); di.Size = UDim2.new(1, -18, 0, 80); di.Position = UDim2.new(0, 9, 0, 28); di.BackgroundTransparency = 1; di.Parent = dc
-    local dil = Instance.new("UIListLayout", di); dil.Padding = UDim.new(0, 4)
-    mkSlider(di, "↔️ Panel Width", cfg.gui.panelW, 440, 900, 1, function(v) cfg.gui.panelW = v; panel.Size = UDim2.new(0, v, 0, cfg.gui.panelH) end)
-    mkSlider(di, "↕️ Panel Height", cfg.gui.panelH, 400, 900, 2, function(v) cfg.gui.panelH = v; panel.Size = UDim2.new(0, cfg.gui.panelW, 0, v) end)
-    local tc = mkCard(tab, 65, 2); mkLabel(tc, "📝 CORNERS", cfg.gui.fontSize, C.textMuted, 12, 6)
-    local ti = Instance.new("Frame"); ti.Size = UDim2.new(1, -18, 0, 35); ti.Position = UDim2.new(0, 9, 0, 28); ti.BackgroundTransparency = 1; ti.Parent = tc
-    mkSlider(ti, "🔤 Corner Radius", cfg.gui.cornerRadius, 0, 24, 1, function(v) cfg.gui.cornerRadius = v end)
-    mkBtn(tab, "🔄 Reset GUI", C.warning, 10, function()
-        cfg.gui = { panelW = 680, panelH = 540, sidebarW = 65, topbarH = 48, fontSize = 12, titleSize = 18, cardSpacing = 10, cardPadding = 12, borderWidth = 1.5, cornerRadius = 14, toggleW = 40, toggleH = 20, sliderH = 10, btnH = 36, panelOpacity = 0.12, accentR = 0, accentG = 220, accentB = 180, bgR = 12, bgG = 12, bgB = 18, sideR = 10, sideG = 10, sideB = 16 }
-        panel.Size = UDim2.new(0, 680, 0, 540); panel.BackgroundTransparency = 0.12; applyTheme(Color3.fromRGB(0, 220, 180)); notify("🔄 GUI Reset!", C.warning)
+-- ── S20: GUI EDITOR ────────────────────────────────────────
+ do local tab = obj.tabFrames["gui"]; if tab then
+     local dc = mkCard(tab, 110, 1); mkLabel(dc, "📐 DIMENSIONS", cfg.gui.fontSize, C.textMuted, 12, 6)
+     local di = inst("Frame"); di.Size = UDim2.new(1, -18, 0, 80); di.Position = UDim2.new(0, 9, 0, 28); di.BackgroundTransparency = 1; di.Parent = dc
+     local dil = inst("UIListLayout", di); dil.Padding = UDim.new(0, 4)
+     mkSlider(di, "↔️ Panel Width", cfg.gui.panelW, 440, 900, 1, function(v) cfg.gui.panelW = v; panel.Size = UDim2.new(0, v, 0, cfg.gui.panelH) end)
+     mkSlider(di, "↕️ Panel Height", cfg.gui.panelH, 400, 900, 2, function(v) cfg.gui.panelH = v; panel.Size = UDim2.new(0, cfg.gui.panelW, 0, v) end)
+     local tc = mkCard(tab, 65, 2); mkLabel(tc, "📝 CORNERS", cfg.gui.fontSize, C.textMuted, 12, 6)
+     local ti = inst("Frame"); ti.Size = UDim2.new(1, -18, 0, 35); ti.Position = UDim2.new(0, 9, 0, 28); ti.BackgroundTransparency = 1; ti.Parent = tc
+     mkSlider(ti, "🔤 Corner Radius", cfg.gui.cornerRadius, 0, 24, 1, function(v) cfg.gui.cornerRadius = v end)
+     mkBtn(tab, "🔄 Reset GUI", C.warning, 10, function()
+         cfg.gui = { panelW = 680, panelH = 540, sidebarW = 65, topbarH = 48, fontSize = 12, titleSize = 18, cardSpacing = 10, cardPadding = 12, borderWidth = 1.5, cornerRadius = 14, toggleW = 40, toggleH = 20, sliderH = 10, btnH = 36, panelOpacity = 0.12, accentR = 0, accentG = 220, accentB = 180, bgR = 12, bgG = 12, bgB = 18, sideR = 10, sideG = 10, sideB = 16 }
+         panel.Size = UDim2.new(0, 680, 0, 540); panel.BackgroundTransparency = 0.12; applyTheme(Color3.fromRGB(0, 220, 180)); notify("🔄 GUI Reset!", C.warning)
+     end)
+ end end
+
+-- ── S20B: PREDATOR SYSTEM HUD (Drawing Class) ──────────────
+local PredatorHUD = {}
+PredatorHUD.__index = PredatorHUD
+local hudErrorBuffer = {}
+local function logHudError(err)
+    table.insert(hudErrorBuffer, { msg = tostring(err), time = os.time() })
+    if #hudErrorBuffer > 20 then table.remove(hudErrorBuffer, 1) end
+end
+
+function PredatorHUD.new()
+    local self = setmetatable({}, PredatorHUD)
+    self.objects = {}
+    self.visible = false
+    
+    -- Panel
+    self.panel = Drawing.new("Square")
+    self.panel.Size = Vector2.new(220, 90)
+    self.panel.Color = Color3.fromRGB(15, 15, 15)
+    self.panel.Transparency = 0.78
+    self.panel.Filled = true
+    table.insert(self.objects, self.panel)
+    
+    -- Animated RGB Border (4 lines)
+    self.borders = {}
+    for i = 1, 4 do
+        local line = Drawing.new("Line")
+        line.Thickness = 1
+        line.Transparency = 1
+        table.insert(self.objects, line)
+        table.insert(self.borders, line)
+    end
+    
+    -- Name Label
+    self.nameLabel = Drawing.new("Text")
+    self.nameLabel.Size = 15
+    self.nameLabel.Center = true
+    self.nameLabel.Outline = true
+    self.nameLabel.Color = Color3.new(1, 1, 1)
+    table.insert(self.objects, self.nameLabel)
+    
+    -- Health Bar BG
+    self.hpBg = Drawing.new("Square")
+    self.hpBg.Size = Vector2.new(180, 6)
+    self.hpBg.Color = Color3.fromRGB(40, 40, 40)
+    self.hpBg.Filled = true
+    table.insert(self.objects, self.hpBg)
+    
+    -- Health Bar Fill
+    self.hpFill = Drawing.new("Square")
+    self.hpFill.Size = Vector2.new(180, 6)
+    self.hpFill.Filled = true
+    table.insert(self.objects, self.hpFill)
+    
+    -- Distance Label
+    self.distLabel = Drawing.new("Text")
+    self.distLabel.Size = 13
+    self.distLabel.Center = true
+    self.distLabel.Outline = true
+    self.distLabel.Color = Color3.fromRGB(200, 200, 200)
+    table.insert(self.objects, self.distLabel)
+    
+    return self
+end
+
+function PredatorHUD:Update(target)
+    if not target or not target.Character then self:Hide(); return end
+    local char = target.Character
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    local root = char:FindFirstChild("HumanoidRootPart")
+    if not hum or hum.Health <= 0 or not root then self:Hide(); return end
+    
+    local ok, err = pcall(function()
+        debug.profilebegin("Medusa.PredatorHUD")
+        local pos, onScreen = camera:WorldToViewportPoint(root.Position)
+        if not onScreen then self:Hide(); return end
+        
+        self.visible = true
+        local viewport = camera.ViewportSize
+        local x = math.clamp(pos.X - 110, 0, viewport.X - 220)
+        local y = math.clamp(pos.Y - 120, 0, viewport.Y - 90)
+        local rect = Vector2.new(x, y)
+        
+        -- Update Panel
+        self.panel.Position = rect
+        self.panel.Visible = true
+        
+        -- Update RGB Border
+        local hue = (tick() % 2) / 2
+        local color = Color3.fromHSV(hue, 1, 1)
+        local p1, p2, p3, p4 = rect, rect + Vector2.new(220, 0), rect + Vector2.new(220, 90), rect + Vector2.new(0, 90)
+        self.borders[1].From = p1; self.borders[1].To = p2; self.borders[1].Color = color; self.borders[1].Visible = true
+        self.borders[2].From = p2; self.borders[2].To = p3; self.borders[2].Color = color; self.borders[2].Visible = true
+        self.borders[3].From = p3; self.borders[3].To = p4; self.borders[3].Color = color; self.borders[3].Visible = true
+        self.borders[4].From = p4; self.borders[4].To = p1; self.borders[4].Color = color; self.borders[4].Visible = true
+        
+        -- Update Name
+        self.nameLabel.Text = target.DisplayName
+        self.nameLabel.Position = rect + Vector2.new(110, 10)
+        self.nameLabel.Visible = true
+        
+        -- Update HP Bar
+        local hpPct = math.clamp(hum.Health / hum.MaxHealth, 0, 1)
+        self.hpBg.Position = rect + Vector2.new(20, 40)
+        self.hpBg.Visible = true
+        self.hpFill.Position = rect + Vector2.new(20, 40)
+        self.hpFill.Size = Vector2.new(180 * hpPct, 6)
+        self.hpFill.Color = Color3.new(1 - hpPct, hpPct, 0) -- Green to Red interpolation
+        self.hpFill.Visible = true
+        
+        -- Update Distance
+        local dist = getMag(camera.CFrame.Position, root.Position)
+        self.distLabel.Text = string.format("%.1f studs", dist)
+        self.distLabel.Position = rect + Vector2.new(110, 60)
+        self.distLabel.Visible = true
+        debug.profileend()
     end)
-end end
+    if not ok then logHudError(err); self:Hide() end
+end
+
+function PredatorHUD:Hide()
+    if not self.visible then return end
+    self.visible = false
+    for _, obj in ipairs(self.objects) do obj.Visible = false end
+end
+
+function PredatorHUD:Destroy()
+    for _, obj in ipairs(self.objects) do pcall(function() obj:Remove() end) end
+    self.objects = {}
+end
+
+local predatorSystem = PredatorHUD.new()
 
 -- ══════════════════════════════════════════════════════════════
 --  S21-S27: ALL LOGIC (unchanged from v13.5)
@@ -1983,8 +2144,8 @@ end
 local function predictPosition(part, char)
     if not cfg.prediction or not part then return part.Position end
     local hrp = char:FindFirstChild("HumanoidRootPart"); if not hrp then return part.Position end
-    local vel = hrp.AssemblyLinearVelocity or hrp.Velocity or Vector3.zero
-    return part.Position + vel * ((part.Position - camera.CFrame.Position).Magnitude / 1000 * cfg.predStrength)
+    local vel = hrp.AssemblyLinearVelocity or hrp.Velocity or v3.zero
+    return part.Position + vel * (getMag(part.Position, camera.CFrame.Position) / 1000 * cfg.predStrength)
 end
 
 local function closestInFOV()
@@ -1992,7 +2153,7 @@ local function closestInFOV()
     for _, plr in ipairs(Players:GetPlayers()) do
         if isValidTarget(plr) then local part = getAimPart(plr.Character)
             if part then local sp, on = camera:WorldToViewportPoint(part.Position)
-                if on then local d = (Vector2.new(sp.X, sp.Y) - mp).Magnitude; if d < cfg.aimbotFOV and d < bestD then best = plr; bestD = d end end
+                if on then local d = getMag(Vector2.new(sp.X, sp.Y), mp); if d < cfg.aimbotFOV and d < bestD then best = plr; bestD = d end end
             end
         end
     end; return best
@@ -2005,12 +2166,22 @@ addConn(RS.RenderStepped:Connect(function()
         if obj.lockedTarget and not isValidTarget(obj.lockedTarget) then obj.lockedTarget = nil end
         if not obj.lockedTarget then obj.lockedTarget = closestInFOV() end
     else obj.lockedTarget = nil end
+    
+    -- Cinematic Ultra: Update Predator HUD
+    if predatorSystem then
+        if obj.lockedTarget then
+            predatorSystem:Update(obj.lockedTarget)
+        else
+            predatorSystem:Hide()
+        end
+    end
+
     if st.aimbot and rmbDown and obj.lockedTarget and obj.lockedTarget.Character then
         local part = getAimPart(obj.lockedTarget.Character)
         if part then
             local tp = predictPosition(part, obj.lockedTarget.Character)
-            if cfg.aimSmooth == 0 then camera.CFrame = CFrame.new(camera.CFrame.Position, tp)
-            else local t = (1 - cfg.aimSmooth / 100) * 0.93 + 0.02; camera.CFrame = CFrame.new(camera.CFrame.Position, camera.CFrame.Position + camera.CFrame.LookVector:Lerp((tp - camera.CFrame.Position).Unit, t).Unit) end
+            if cfg.aimSmooth == 0 then camera.CFrame = cf(camera.CFrame.Position, tp)
+            else local t = (1 - cfg.aimSmooth / 100) * 0.93 + 0.02; camera.CFrame = cf(camera.CFrame.Position, camera.CFrame.Position + camera.CFrame.LookVector:Lerp((tp - camera.CFrame.Position).Unit, t).Unit) end
         end
     end
     -- Status pills
@@ -2056,9 +2227,9 @@ local function applyCurve(origin, targetPos)
     if dist < 1 then return dir.Unit end
     local norm = dir.Unit
     -- Create perpendicular vector
-    local up = Vector3.new(0, 1, 0)
+    local up = v3(0, 1, 0)
     local perp = norm:Cross(up)
-    if perp.Magnitude < 0.01 then perp = norm:Cross(Vector3.new(1, 0, 0)) end
+    if perp.Magnitude < 0.01 then perp = norm:Cross(v3(1, 0, 0)) end
     perp = perp.Unit
     -- Curve offset: subtle sine wave based on tick(), scaled by strength
     local curveAmount = math.sin(tick() * 3.7) * cfg.silentCurveStr * (dist / 100)
@@ -2086,9 +2257,9 @@ if XC.hookmetamethod then pcall(function()
                 if key == "JumpHeight" then return 7.2 end
             end
             if self == myHRP then
-                if key == "Velocity" then return Vector3.zero end
-                if key == "AssemblyLinearVelocity" then return Vector3.zero end
-                if key == "AssemblyAngularVelocity" then return Vector3.zero end
+                if key == "Velocity" then return v3.zero end
+                if key == "AssemblyLinearVelocity" then return v3.zero end
+                if key == "AssemblyAngularVelocity" then return v3.zero end
             end
         end
         -- S22: SILENT AIM — redirect mouse.Hit/Target/UnitRay
@@ -2097,7 +2268,7 @@ if XC.hookmetamethod then pcall(function()
                 local part = getSilentTarget(obj.lockedTarget.Character)
                 if part then
                     local pos = predictPosition(part, obj.lockedTarget.Character)
-                    if key == "Hit" then return CFrame.new(pos) end
+                    if key == "Hit" then return cf(pos) end
                     if key == "Target" then return part end
                     if key == "UnitRay" then
                         local curvedDir = applyCurve(camera.CFrame.Position, pos)
@@ -2294,15 +2465,15 @@ addConn(Players.PlayerAdded:Connect(function(plr) task.delay(2, function() if st
 addConn(Players.PlayerRemoving:Connect(function(plr) if obj.espObjs[plr] then local d = obj.espObjs[plr]; pcall(function() if d.hl then d.hl:Destroy() end end); pcall(function() if d.bb then d.bb:Destroy() end end); pcall(function() if d.box then d.box:Destroy() end end); pcall(function() if d.cn then d.cn:Disconnect() end end); obj.espObjs[plr] = nil end end))
 
 -- Movement
-function enableFly() local c = player.Character; if not c then return end; local hrp = c:FindFirstChild("HumanoidRootPart"); if not hrp then return end; pcall(function() if obj.bv then obj.bv:Destroy() end end); pcall(function() if obj.bg then obj.bg:Destroy() end end); obj.bv = Instance.new("BodyVelocity"); obj.bv.MaxForce = Vector3.new(1e5,1e5,1e5); obj.bv.Velocity = Vector3.zero; obj.bv.Parent = hrp; obj.bg = Instance.new("BodyGyro"); obj.bg.MaxTorque = Vector3.new(1e5,1e5,1e5); obj.bg.P = 1e4; obj.bg.Parent = hrp end
+function enableFly() local c = player.Character; if not c then return end; local hrp = c:FindFirstChild("HumanoidRootPart"); if not hrp then return end; pcall(function() if obj.bv then obj.bv:Destroy() end end); pcall(function() if obj.bg then obj.bg:Destroy() end end); obj.bv = inst("BodyVelocity"); obj.bv.MaxForce = v3(1e5,1e5,1e5); obj.bv.Velocity = v3.zero; obj.bv.Parent = hrp; obj.bg = inst("BodyGyro"); obj.bg.MaxTorque = v3(1e5,1e5,1e5); obj.bg.P = 1e4; obj.bg.Parent = hrp end
 function disableFly() pcall(function() if obj.bv then obj.bv:Destroy(); obj.bv = nil end end); pcall(function() if obj.bg then obj.bg:Destroy(); obj.bg = nil end end) end
 
 addConn(RS.RenderStepped:Connect(function() if not st.running then return end
-    if st.fly and obj.bv and obj.bg then local cam = camera.CFrame; local mv = Vector3.zero
+    if st.fly and obj.bv and obj.bg then local cam = camera.CFrame; local mv = v3.zero
         if UIS:IsKeyDown(Enum.KeyCode.W) then mv = mv + cam.LookVector end; if UIS:IsKeyDown(Enum.KeyCode.S) then mv = mv - cam.LookVector end
         if UIS:IsKeyDown(Enum.KeyCode.A) then mv = mv - cam.RightVector end; if UIS:IsKeyDown(Enum.KeyCode.D) then mv = mv + cam.RightVector end
         if UIS:IsKeyDown(Enum.KeyCode.Space) then mv = mv + Vector3.yAxis end; if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then mv = mv - Vector3.yAxis end
-        obj.bv.Velocity = mv.Magnitude > 0 and mv.Unit * cfg.flySpeed or Vector3.zero; obj.bg.CFrame = cam
+        obj.bv.Velocity = getMag(mv, v3.zero) > 0 and mv.Unit * cfg.flySpeed or v3.zero; obj.bg.CFrame = cam
     end
 end))
 addConn(RS.Stepped:Connect(function() if not st.running then return end; if not (getgenv and getgenv().MedusaLoaded) then return end; if st.noclip and player.Character then for _, p in ipairs(player.Character:GetDescendants()) do if p:IsA("BasePart") then p.CanCollide = false end end end end))
@@ -2503,7 +2674,7 @@ local function doPanic()
                 h:ChangeState(Enum.HumanoidStateType.GettingUp)
             end
             local hrp = c:FindFirstChild("HumanoidRootPart")
-            if hrp then hrp.CanCollide = true; hrp.Velocity = Vector3.zero end
+            if hrp then hrp.CanCollide = true; hrp.Velocity = v3.zero end
         end
     end)
     -- Force noclip OFF globally
@@ -2568,6 +2739,9 @@ local function doEject()
     for k in pairs(obj.espObjs) do obj.espObjs[k] = nil end
     for k in pairs(obj.origSizes) do obj.origSizes[k] = nil end
     
+    -- Cinematic Ultra: Destroy Predator HUD
+    if predatorSystem then pcall(function() predatorSystem:Destroy() end) end
+    
     -- Destroy Active HUD + Custom Cursor explicitly
     pcall(function() if obj.activeHudGui then obj.activeHudGui:Destroy() end end)
     pcall(function() if obj.cursorGui then obj.cursorGui:Destroy() end end)
@@ -2614,8 +2788,8 @@ local function doEject()
             -- FIRST: ANCHOR the HRP to freeze physics, kill all velocity
             if hrp then 
                 hrp.Anchored = true
-                hrp.Velocity = Vector3.new(0, 0, 0)
-                hrp.RotVelocity = Vector3.new(0, 0, 0)
+                hrp.Velocity = v3.new(0, 0, 0)
+                hrp.RotVelocity = v3.new(0, 0, 0)
             end
             
             -- SECOND: Wait for physics engine to process the anchor
@@ -2640,7 +2814,7 @@ local function doEject()
             if hum then 
                 hum.WalkSpeed = 16
                 hum.JumpPower = 50
-                hum.CameraOffset = Vector3.new(0, 0, 0)
+                hum.CameraOffset = v3.new(0, 0, 0)
             end
             
             -- SIXTH: Wait again, then UNANCHOR and force physics recalc
@@ -2686,7 +2860,7 @@ local function doEject()
     end)
     pcall(function()
         local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
-        if hum then hum.CameraOffset = Vector3.new(0, 0, 0) end
+        if hum then hum.CameraOffset = v3.new(0, 0, 0) end
     end)
     
     -- Restore mouse cursor (Fix: invisible mouse after eject)
@@ -3244,50 +3418,54 @@ pcall(function() refreshPlayers() end)
 panel.Visible = false
 
 -- ── CINEMATIC INTRO SCREEN ──────────────────────────────────
-local introGui = Instance.new("ScreenGui")
+local introGui = inst("ScreenGui")
 introGui.Name = "MedusaCinematic_" .. math.random(1000, 9999)
 introGui.DisplayOrder = 999; introGui.IgnoreGuiInset = true
 introGui.ResetOnSpawn = false; introGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 pcall(function() introGui.Parent = guiParent end)
 
 -- Black cinematic backdrop
-local introBG = Instance.new("Frame")
+local introBG = inst("Frame")
 introBG.Size = UDim2.new(1, 0, 1, 0); introBG.BackgroundColor3 = Color3.fromRGB(2, 2, 5)
 introBG.BackgroundTransparency = 0; introBG.BorderSizePixel = 0; introBG.ZIndex = 1
 introBG.Parent = introGui
 
 -- ── Glitch Snake Icon ──────────────────────────────────────
-local snakeContainer = Instance.new("Frame")
+local snakeContainer = inst("Frame")
 snakeContainer.Size = UDim2.new(0, 300, 0, 80); snakeContainer.Position = UDim2.new(0.5, -150, 0.35, 0)
 snakeContainer.BackgroundTransparency = 1; snakeContainer.ZIndex = 10; snakeContainer.Parent = introBG
 
 -- Main snake emoji
-local snakeMain = Instance.new("TextLabel")
+local snakeMain = inst("TextLabel")
 snakeMain.Size = UDim2.new(0, 60, 0, 60); snakeMain.Position = UDim2.new(0, 0, 0, 10)
-snakeMain.BackgroundTransparency = 1; snakeMain.Font = Enum.Font.GothamBlack
+snakeMain.BackgroundTransparency = 1; snakeMain.Font = Enum.Font.RobotoCondensed
 snakeMain.TextSize = 48; snakeMain.TextColor3 = Color3.new(1, 1, 1); snakeMain.Text = "🐍"
 snakeMain.ZIndex = 12; snakeMain.Parent = snakeContainer
+pcall(function() snakeMain.FontFace = Font.fromName("RobotoCondensed", Enum.FontWeight.Bold) end)
 
 -- Red glitch offset (RGB effect)
-local snakeR = Instance.new("TextLabel")
+local snakeR = inst("TextLabel")
 snakeR.Size = UDim2.new(0, 60, 0, 60); snakeR.Position = UDim2.new(0, 3, 0, 8)
-snakeR.BackgroundTransparency = 1; snakeR.Font = Enum.Font.GothamBlack
+snakeR.BackgroundTransparency = 1; snakeR.Font = Enum.Font.RobotoCondensed
 snakeR.TextSize = 48; snakeR.TextColor3 = Color3.fromRGB(255, 0, 80); snakeR.TextTransparency = 0.6
 snakeR.Text = "🐍"; snakeR.ZIndex = 11; snakeR.Parent = snakeContainer
+pcall(function() snakeR.FontFace = Font.fromName("RobotoCondensed", Enum.FontWeight.Bold) end)
 
 -- Cyan glitch offset
-local snakeC = Instance.new("TextLabel")
+local snakeC = inst("TextLabel")
 snakeC.Size = UDim2.new(0, 60, 0, 60); snakeC.Position = UDim2.new(0, -3, 0, 12)
-snakeC.BackgroundTransparency = 1; snakeC.Font = Enum.Font.GothamBlack
+snakeC.BackgroundTransparency = 1; snakeC.Font = Enum.Font.RobotoCondensed
 snakeC.TextSize = 48; snakeC.TextColor3 = Color3.fromRGB(0, 255, 220); snakeC.TextTransparency = 0.6
 snakeC.Text = "🐍"; snakeC.ZIndex = 11; snakeC.Parent = snakeContainer
+pcall(function() snakeC.FontFace = Font.fromName("RobotoCondensed", Enum.FontWeight.Bold) end)
 
 -- Title "MEDUSA"
-local introTitle = Instance.new("TextLabel")
+local introTitle = inst("TextLabel")
 introTitle.Size = UDim2.new(0, 220, 0, 50); introTitle.Position = UDim2.new(0, 70, 0, 15)
-introTitle.BackgroundTransparency = 1; introTitle.Font = Enum.Font.GothamBlack
+introTitle.BackgroundTransparency = 1; introTitle.Font = Enum.Font.RobotoCondensed
 introTitle.TextSize = 44; introTitle.TextColor3 = Color3.new(1, 1, 1); introTitle.Text = "MEDUSA"
 introTitle.ZIndex = 12; introTitle.Parent = snakeContainer
+pcall(function() introTitle.FontFace = Font.fromName("RobotoCondensed", Enum.FontWeight.Bold) end)
 
 -- Title glitch layers
 local titleR = introTitle:Clone(); titleR.TextColor3 = Color3.fromRGB(255, 0, 80)
@@ -3299,47 +3477,51 @@ titleC.TextTransparency = 0.65; titleC.Position = UDim2.new(0, 67, 0, 17); title
 titleC.Parent = snakeContainer
 
 -- Subtitle
-local introSub = Instance.new("TextLabel")
+local introSub = inst("TextLabel")
 introSub.Size = UDim2.new(0, 300, 0, 20); introSub.Position = UDim2.new(0.5, -150, 0.35, 85)
-introSub.BackgroundTransparency = 1; introSub.Font = Enum.Font.GothamMedium
+introSub.BackgroundTransparency = 1; introSub.Font = Enum.Font.RobotoCondensed
 introSub.TextSize = 13; introSub.TextColor3 = C.textMuted; introSub.TextTransparency = 0.3
 introSub.Text = "v15.1 — CINEMATIC EDITION"; introSub.ZIndex = 10; introSub.Parent = introBG
+pcall(function() introSub.FontFace = Font.fromName("RobotoCondensed", Enum.FontWeight.Medium) end)
 
 -- ── Progress Bar ───────────────────────────────────────────
-local barBG = Instance.new("Frame")
+local barBG = inst("Frame")
 barBG.Size = UDim2.new(0, 280, 0, 6); barBG.Position = UDim2.new(0.5, -140, 0.35, 120)
 barBG.BackgroundColor3 = Color3.fromRGB(25, 25, 35); barBG.BorderSizePixel = 0; barBG.ZIndex = 10
 barBG.Parent = introBG; mkCorner(barBG, 3)
 
-local barFill = Instance.new("Frame")
+local barFill = inst("Frame")
 barFill.Size = UDim2.new(0, 0, 1, 0); barFill.BackgroundColor3 = C.accent
 barFill.BorderSizePixel = 0; barFill.ZIndex = 11; barFill.Parent = barBG; mkCorner(barFill, 3)
 
 -- Glow on fill
-local barGlow = Instance.new("UIStroke", barFill)
+local barGlow = inst("UIStroke", barFill)
 barGlow.Color = C.accent; barGlow.Thickness = 1.5; barGlow.Transparency = 0.4
 
 -- Percentage
-local barPct = Instance.new("TextLabel")
+local barPct = inst("TextLabel")
 barPct.Size = UDim2.new(0, 280, 0, 18); barPct.Position = UDim2.new(0.5, -140, 0.35, 132)
-barPct.BackgroundTransparency = 1; barPct.Font = Enum.Font.GothamBold
+barPct.BackgroundTransparency = 1; barPct.Font = Enum.Font.RobotoCondensed
 barPct.TextSize = 14; barPct.TextColor3 = C.accent; barPct.Text = "0%"
 barPct.ZIndex = 10; barPct.Parent = introBG
+pcall(function() barPct.FontFace = Font.fromName("RobotoCondensed", Enum.FontWeight.Bold) end)
 
 -- Status text
-local barStatus = Instance.new("TextLabel")
+local barStatus = inst("TextLabel")
 barStatus.Size = UDim2.new(0, 300, 0, 16); barStatus.Position = UDim2.new(0.5, -150, 0.35, 155)
-barStatus.BackgroundTransparency = 1; barStatus.Font = Enum.Font.Gotham
+barStatus.BackgroundTransparency = 1; barStatus.Font = Enum.Font.RobotoCondensed
 barStatus.TextSize = 11; barStatus.TextColor3 = C.textMuted; barStatus.Text = ""
 barStatus.ZIndex = 10; barStatus.Parent = introBG
+pcall(function() barStatus.FontFace = Font.fromName("RobotoCondensed", Enum.FontWeight.Regular) end)
 
 -- Credits at bottom
-local introCreds = Instance.new("TextLabel")
+local introCreds = inst("TextLabel")
 introCreds.Size = UDim2.new(1, 0, 0, 20); introCreds.Position = UDim2.new(0, 0, 1, -40)
-introCreds.BackgroundTransparency = 1; introCreds.Font = Enum.Font.Gotham
+introCreds.BackgroundTransparency = 1; introCreds.Font = Enum.Font.RobotoCondensed
 introCreds.TextSize = 10; introCreds.TextColor3 = Color3.fromRGB(60, 60, 70)
 introCreds.Text = "Made by .donatorexe.  •  Xeno Optimized"; introCreds.ZIndex = 10
 introCreds.Parent = introBG
+pcall(function() introCreds.FontFace = Font.fromName("RobotoCondensed", Enum.FontWeight.Regular) end)
 
 -- ── Glitch Animation Loop ──────────────────────────────────
 local glitchRunning = true
@@ -3468,6 +3650,9 @@ task.delay(0.1, function()
     TS:Create(panel, TweenInfo.new(0.8, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
         Position = finalPos, BackgroundTransparency = cfg.gui.panelOpacity
     }):Play()
+    -- Cinematic Ultra: Fade in white glow
+    TS:Create(whiteGlow, TweenInfo.new(0.25), { Transparency = 0.4 }):Play()
+    TS:Create(glowBlur, TweenInfo.new(0.25), { Transparency = 0.7 }):Play()
 end)
 task.delay(0.3, function()
     if panelStroke then TS:Create(panelStroke, TweenInfo.new(0.5, Enum.EasingStyle.Quint), { Transparency = 0.15 }):Play() end
