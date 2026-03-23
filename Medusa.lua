@@ -607,10 +607,11 @@ local function mkCard(parent, height, order)
     c.AutomaticSize = Enum.AutomaticSize.Y -- auto-grow if content overflows
     c.BackgroundColor3 = C.glass; c.BackgroundTransparency = 0.35
     c.BorderSizePixel = 0; c.LayoutOrder = order or 0
-    c.ClipsDescendants = false; c.Parent = parent
-    mkCorner(c, CR)
+    c.ClipsDescendants = true; c.Parent = parent
+    inst("UICorner", c).CornerRadius = UDim.new(0, 10) -- Cinematic Ultra: 10px rounding
     local sk = inst("UIStroke", c)
     sk.Color = C.border; sk.Thickness = 1; sk.Transparency = 0.55
+    sk.ApplyStrokeMode = Enum.ApplyStrokeMode.Border -- Smoothing protocol
     -- Inner glow gradient
     local grad = inst("UIGradient", c)
     grad.Color = ColorSequence.new({
@@ -649,7 +650,7 @@ local function mkToggle(parent, text, default, order, callback)
     row.Size = UDim2.new(1, 0, 0, 34)
     row.BackgroundColor3 = C.glassHi; row.BackgroundTransparency = 0.88
     row.BorderSizePixel = 0; row.LayoutOrder = order or 0; row.Parent = parent
-    mkCorner(row, 8)
+    row.ClipsDescendants = true; inst("UICorner", row).CornerRadius = UDim.new(0, 10) -- Cinematic Ultra: 10px rounding
 
     local lbl = inst("TextLabel")
     lbl.Size = UDim2.new(1, -70, 0, 34); lbl.Position = UDim2.new(0, 14, 0, 0)
@@ -664,23 +665,25 @@ local function mkToggle(parent, text, default, order, callback)
     track.Position = UDim2.new(1, -(TW + 12), 0.5, -TH / 2)
     track.BackgroundColor3 = default and C.accent or C.toggleOff
     track.BackgroundTransparency = default and 0.15 or 0.3
-    track.BorderSizePixel = 0; track.Parent = row
-    mkCorner(track, TH / 2)
+    track.BorderSizePixel = 0; track.Parent = row; track.ClipsDescendants = true
+    inst("UICorner", track).CornerRadius = UDim.new(0, 10) -- Cinematic Ultra: 10px rounding
 
     -- Neon glow aura (only visible when ON)
     local glow = inst("UIStroke", track)
     glow.Color = C.accent; glow.Thickness = default and 2.5 or 0; glow.Transparency = default and 0.25 or 1
+    glow.ApplyStrokeMode = Enum.ApplyStrokeMode.Border -- Smoothing protocol
 
     local knobSize = TH - 4
     local knob = inst("Frame")
     knob.Size = UDim2.new(0, knobSize, 0, knobSize)
     knob.Position = default and UDim2.new(1, -(knobSize + 2), 0.5, -knobSize / 2) or UDim2.new(0, 2, 0.5, -knobSize / 2)
     knob.BackgroundColor3 = Color3.new(1, 1, 1); knob.BorderSizePixel = 0; knob.ZIndex = 2; knob.Parent = track
-    mkCorner(knob, knobSize / 2)
+    inst("UICorner", knob).CornerRadius = UDim.new(0, 10) -- Cinematic Ultra: 10px rounding
     -- Knob inner glow
     local knobGlow = inst("UIStroke", knob)
     knobGlow.Color = default and C.accent or Color3.fromRGB(80, 80, 80)
     knobGlow.Thickness = 1.5; knobGlow.Transparency = 0.3
+    knobGlow.ApplyStrokeMode = Enum.ApplyStrokeMode.Border -- Smoothing protocol
 
     local on = default
     local function setVisual(state)
@@ -770,8 +773,8 @@ local function mkSlider(parent, text, initVal, minV, maxV, order, callback)
     row.Size = UDim2.new(1, 0, 0, 48)
     row.BackgroundColor3 = C.glassHi; row.BackgroundTransparency = 0.88
     row.BorderSizePixel = 0; row.LayoutOrder = order or 0
-    row.ClipsDescendants = false; row.Parent = parent
-    mkCorner(row, 8)
+    row.ClipsDescendants = true; row.Parent = parent
+    inst("UICorner", row).CornerRadius = UDim.new(0, 10) -- Cinematic Ultra: 10px rounding
 
     local lbl = inst("TextLabel")
     lbl.Size = UDim2.new(1, -60, 0, 18); lbl.Position = UDim2.new(0, 14, 0, 3)
@@ -784,12 +787,13 @@ local function mkSlider(parent, text, initVal, minV, maxV, order, callback)
     local valBadge = inst("TextLabel")
     valBadge.Size = UDim2.new(0, 46, 0, 18); valBadge.Position = UDim2.new(1, -56, 0, 2)
     valBadge.BackgroundColor3 = C.accent; valBadge.BackgroundTransparency = 0.78
-    valBadge.BorderSizePixel = 0; valBadge.Font = Enum.Font.RobotoCondensed
+    valBadge.BorderSizePixel = 0; valBadge.ClipsDescendants = true; valBadge.Font = Enum.Font.RobotoCondensed
     valBadge.TextSize = 10; valBadge.TextColor3 = C.accent
     valBadge.Text = tostring(initVal); valBadge.Parent = row
-    mkCorner(valBadge, 6)
+    inst("UICorner", valBadge).CornerRadius = UDim.new(0, 6) -- Cinematic Ultra: 6px rounding
     pcall(function() valBadge.FontFace = Font.fromName("RobotoCondensed", Enum.FontWeight.Bold) end)
     local vbSk = inst("UIStroke", valBadge); vbSk.Color = C.accent; vbSk.Thickness = 1; vbSk.Transparency = 0.6
+    vbSk.ApplyStrokeMode = Enum.ApplyStrokeMode.Border -- Smoothing protocol
     table.insert(obj.themeElements, { obj = valBadge, prop = "TextColor3" })
     table.insert(obj.themeElements, { obj = valBadge, prop = "BackgroundColor3" })
     table.insert(obj.themeElements, { obj = vbSk, prop = "Color" })
@@ -799,19 +803,20 @@ local function mkSlider(parent, text, initVal, minV, maxV, order, callback)
     track.Size = UDim2.new(1, -28, 0, cfg.gui.sliderH)
     track.Position = UDim2.new(0, 14, 0, 28)
     track.BackgroundColor3 = C.sliderTrack; track.BackgroundTransparency = 0.3
-    track.BorderSizePixel = 0; track.ClipsDescendants = false; track.Parent = row
-    mkCorner(track, cfg.gui.sliderH / 2)
+    track.BorderSizePixel = 0; track.ClipsDescendants = true; track.Parent = row
+    inst("UICorner", track).CornerRadius = UDim.new(0, 10) -- Cinematic Ultra: 10px rounding
 
     local pct = math.clamp((initVal - minV) / (maxV - minV), 0, 1)
     local fill = inst("Frame")
     fill.Size = UDim2.new(pct, 0, 1, 0)
     fill.BackgroundColor3 = C.accent; fill.BackgroundTransparency = 0.15
     fill.BorderSizePixel = 0; fill.Parent = track
-    mkCorner(fill, cfg.gui.sliderH / 2)
+    inst("UICorner", fill).CornerRadius = UDim.new(0, 10) -- Cinematic Ultra: 10px rounding
     table.insert(obj.themeElements, { obj = fill, prop = "BackgroundColor3" })
     -- Neon glow on fill
     local fillGlow = inst("UIStroke", fill)
     fillGlow.Color = C.accent; fillGlow.Thickness = 1; fillGlow.Transparency = 0.5
+    fillGlow.ApplyStrokeMode = Enum.ApplyStrokeMode.Border -- Smoothing protocol
     table.insert(obj.themeElements, { obj = fillGlow, prop = "Color" })
 
     -- Glass knob with glow
@@ -823,8 +828,9 @@ local function mkSlider(parent, text, initVal, minV, maxV, order, callback)
     knob.BackgroundColor3 = Color3.new(1, 1, 1)
     knob.BackgroundTransparency = 0.05
     knob.BorderSizePixel = 0; knob.ZIndex = 10; knob.Parent = track
-    mkCorner(knob, knobSize / 2)
+    inst("UICorner", knob).CornerRadius = UDim.new(0, 10) -- Cinematic Ultra: 10px rounding
     local ksk = inst("UIStroke", knob); ksk.Color = C.accent; ksk.Thickness = 2.5; ksk.Transparency = 0.1
+    ksk.ApplyStrokeMode = Enum.ApplyStrokeMode.Border -- Smoothing protocol
     table.insert(obj.themeElements, { obj = ksk, prop = "Color" })
 
     local dragging = false
@@ -859,15 +865,16 @@ local function mkBtn(parent, text, color, order, callback)
     btn.BorderSizePixel = 0; btn.AutoButtonColor = false
     btn.Font = Enum.Font.RobotoCondensed; btn.TextSize = cfg.gui.fontSize
     btn.TextColor3 = C.text; btn.Text = text; btn.Parent = parent
-    mkCorner(btn, 10)
+    inst("UICorner", btn).CornerRadius = UDim.new(0, 10) -- Cinematic Ultra: 10px rounding
     pcall(function() btn.FontFace = Font.fromName("RobotoCondensed", Enum.FontWeight.Bold) end)
     -- Left neon bar
     local bar = inst("Frame")
     bar.Size = UDim2.new(0, 3, 0.5, 0); bar.Position = UDim2.new(0, 0, 0.25, 0)
     bar.BackgroundColor3 = ac; bar.BorderSizePixel = 0; bar.Parent = btn
-    mkCorner(bar, 2)
+    inst("UICorner", bar).CornerRadius = UDim.new(0, 2)
     -- Glass border
     local sk = inst("UIStroke", btn); sk.Color = ac; sk.Thickness = 1; sk.Transparency = 0.7
+    sk.ApplyStrokeMode = Enum.ApplyStrokeMode.Border -- Smoothing protocol
     -- Hover: glass highlight + bar expand
     btn.MouseEnter:Connect(function()
         TS:Create(sk, TweenInfo.new(0.18, Enum.EasingStyle.Quad), { Transparency = 0.15, Thickness = 1.5 }):Play()
@@ -906,9 +913,11 @@ local function mkPartSelector(parent, order)
         b.BackgroundTransparency = nm == cfg.aimbotPart and 0.25 or 0.6
         b.BorderSizePixel = 0; b.AutoButtonColor = false; b.Font = Enum.Font.GothamBold
         b.TextSize = 11; b.TextColor3 = nm == cfg.aimbotPart and C.accent or C.textMuted
-        b.Text = nm; b.Parent = row; mkCorner(b, 8)
+        b.Text = nm; b.Parent = row; b.ClipsDescendants = true
+        inst("UICorner", b).CornerRadius = UDim.new(0, 10) -- Cinematic Ultra: 10px rounding
         local bsk = Instance.new("UIStroke", b); bsk.Color = nm == cfg.aimbotPart and C.accent or C.border
         bsk.Thickness = 1; bsk.Transparency = nm == cfg.aimbotPart and 0.2 or 0.6
+        bsk.ApplyStrokeMode = Enum.ApplyStrokeMode.Border -- Smoothing protocol
         btns[nm] = { btn = b, sk = bsk }
         b.MouseButton1Click:Connect(function()
             cfg.aimbotPart = nm
@@ -952,11 +961,12 @@ local function Notify(titleOrText, textOrColor, durationOrNil)
     fr.Size = UDim2.new(0, 340, 0, 78)
     fr.Position = UDim2.new(1, 360, 1, -90 - (#notifStack * 86))
     fr.BackgroundColor3 = C.glass; fr.BackgroundTransparency = 0.06
-    fr.BorderSizePixel = 0; fr.Parent = sg
-    mkCorner(fr, 12)
+    fr.BorderSizePixel = 0; fr.ClipsDescendants = true; fr.Parent = sg
+    inst("UICorner", fr).CornerRadius = UDim.new(0, 10) -- Cinematic Ultra: 10px rounding
     
     -- Toast stroke — uses accent color with rainbow support
     local sk = inst("UIStroke", fr); sk.Color = color; sk.Thickness = 1.5; sk.Transparency = 0.1
+    sk.ApplyStrokeMode = Enum.ApplyStrokeMode.Border -- Smoothing protocol
     -- Register for rainbow if RGB is on
     if cfg.rgb.stroke then
         table.insert(obj.rgbElements, { obj = sk, prop = "Color", type = "stroke" })
@@ -1140,12 +1150,13 @@ panel.Size = UDim2.new(0, cfg.gui.panelW, 0, cfg.gui.panelH)
 panel.Position = UDim2.new(1, -(cfg.gui.panelW + 24), 0.5, -cfg.gui.panelH / 2)
 panel.BackgroundColor3 = C.bg; panel.BackgroundTransparency = cfg.gui.panelOpacity
 panel.BorderSizePixel = 0; panel.ClipsDescendants = true; panel.ZIndex = 1; panel.Parent = screenGui
-mkCorner(panel, CR)
+inst("UICorner", panel).CornerRadius = UDim.new(0, 15) -- Cinematic Ultra: 15px rounding (Premium Hierarchy)
 obj.panel = panel
 
 -- Neon border glow
 local panelStroke = inst("UIStroke", panel)
 panelStroke.Color = C.accent; panelStroke.Thickness = 2; panelStroke.Transparency = 0.2
+panelStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border -- Smoothing protocol
 table.insert(obj.rgbElements, { obj = panelStroke, prop = "Color", type = "stroke" })
 table.insert(obj.themeElements, { obj = panelStroke, prop = "Color" })
 
@@ -1154,10 +1165,13 @@ local whiteGlow = inst("UIStroke", panel)
 whiteGlow.Color = Color3.new(1, 1, 1)
 whiteGlow.Thickness = 1
 whiteGlow.Transparency = 1 -- Start transparent for fade-in
+whiteGlow.ApplyStrokeMode = Enum.ApplyStrokeMode.Border -- Smoothing protocol
+
 local glowBlur = inst("UIStroke", panel) -- Simplified blur representation via stroke thickness
 glowBlur.Color = Color3.new(1, 1, 1)
 glowBlur.Thickness = 4
 glowBlur.Transparency = 1
+glowBlur.ApplyStrokeMode = Enum.ApplyStrokeMode.Border -- Smoothing protocol
 
 -- Glass gradient overlay
 local panelGrad = inst("UIGradient", panel)
@@ -1257,9 +1271,10 @@ table.insert(obj.themeElements, { obj = titleLbl, prop = "TextColor3" })
 local verBadge = inst("TextLabel")
 verBadge.Size = UDim2.new(0, 48, 0, 18); verBadge.Position = UDim2.new(0, 148, 0.5, -9)
 verBadge.BackgroundColor3 = C.accent; verBadge.BackgroundTransparency = 0.8
-verBadge.BorderSizePixel = 0; verBadge.Font = Enum.Font.RobotoCondensed
+verBadge.BorderSizePixel = 0; verBadge.ClipsDescendants = true; verBadge.Font = Enum.Font.RobotoCondensed
 verBadge.TextSize = 9; verBadge.TextColor3 = C.accent; verBadge.Text = "v15.1"
-verBadge.ZIndex = 5; verBadge.Parent = topbar; mkCorner(verBadge, 6)
+verBadge.ZIndex = 5; verBadge.Parent = topbar
+inst("UICorner", verBadge).CornerRadius = UDim.new(0, 6) -- Cinematic Ultra: 6px rounding
 pcall(function() verBadge.FontFace = Font.fromName("RobotoCondensed", Enum.FontWeight.Bold) end)
 table.insert(obj.themeElements, { obj = verBadge, prop = "TextColor3" })
 table.insert(obj.themeElements, { obj = verBadge, prop = "BackgroundColor3" })
@@ -1310,10 +1325,12 @@ for i, tab in ipairs(TABS) do
     local tooltip = Instance.new("TextLabel")
     tooltip.Size = UDim2.new(0, 75, 0, 24); tooltip.Position = UDim2.new(1, 10, 0.5, -12)
     tooltip.BackgroundColor3 = C.glass; tooltip.BackgroundTransparency = 0.1
-    tooltip.BorderSizePixel = 0; tooltip.Font = Enum.Font.GothamSemibold
+    tooltip.BorderSizePixel = 0; tooltip.ClipsDescendants = true; tooltip.Font = Enum.Font.GothamSemibold
     tooltip.TextSize = 10; tooltip.TextColor3 = C.text; tooltip.Text = tab.id:upper()
-    tooltip.ZIndex = 20; tooltip.Visible = false; tooltip.Parent = tbtn; mkCorner(tooltip, 6)
+    tooltip.ZIndex = 20; tooltip.Visible = false; tooltip.Parent = tbtn
+    inst("UICorner", tooltip).CornerRadius = UDim.new(0, 8) -- Cinematic Ultra: 8px rounding for tooltips
     local ttSk = Instance.new("UIStroke", tooltip); ttSk.Color = C.accent; ttSk.Thickness = 1; ttSk.Transparency = 0.4
+    ttSk.ApplyStrokeMode = Enum.ApplyStrokeMode.Border -- Smoothing protocol
 
     tbtn.MouseEnter:Connect(function()
         tooltip.Visible = true
@@ -1423,9 +1440,10 @@ local wmPill = Instance.new("Frame")
 wmPill.Size = UDim2.new(0, 390, 0, 30)
 wmPill.Position = UDim2.new(0.5, -195, 0, 8)
 wmPill.BackgroundColor3 = C.glass; wmPill.BackgroundTransparency = 0.2
-wmPill.BorderSizePixel = 0; wmPill.Parent = wmPillGui
-mkCorner(wmPill, 15)
+wmPill.BorderSizePixel = 0; wmPill.ClipsDescendants = true; wmPill.Parent = wmPillGui
+inst("UICorner", wmPill).CornerRadius = UDim.new(0, 15) -- Cinematic Ultra: 15px rounding
 local wmSk = Instance.new("UIStroke", wmPill); wmSk.Color = C.accent; wmSk.Thickness = 1.5; wmSk.Transparency = 0.35
+wmSk.ApplyStrokeMode = Enum.ApplyStrokeMode.Border -- Smoothing protocol
 table.insert(obj.themeElements, { obj = wmSk, prop = "Color" })
 
 -- Status light (pulsing dot)
@@ -1471,8 +1489,9 @@ do local tab = obj.tabFrames["status"]; if tab then
         { key = "noclip", txt = "👻 Noclip", col = C.success }, { key = "triggerBot", txt = "🔫 Trigger", col = C.warning },
     }) do
         local p = Instance.new("TextLabel"); p.BackgroundColor3 = C.glass; p.BackgroundTransparency = 0.45
-        p.BorderSizePixel = 0; p.Font = Enum.Font.GothamMedium; p.TextSize = 10; p.TextColor3 = C.textMuted
-        p.Text = pd.txt .. " OFF"; p.Parent = pf; mkCorner(p, 6)
+        p.BorderSizePixel = 0; p.ClipsDescendants = true; p.Font = Enum.Font.GothamMedium; p.TextSize = 10; p.TextColor3 = C.textMuted
+        p.Text = pd.txt .. " OFF"; p.Parent = pf
+        inst("UICorner", p).CornerRadius = UDim.new(0, 6) -- Cinematic Ultra: 6px rounding for pills
         obj.statusPills[pd.key] = { label = p, color = pd.col }
     end
     local lockCard = mkCard(tab, 44, 2); local lockLbl = mkLabel(lockCard, "🔓 No Target", cfg.gui.fontSize, C.textMuted, 12, 12)
@@ -1566,7 +1585,9 @@ do local tab = obj.tabFrames["visuals"]; if tab then
         sb.BackgroundTransparency = si == cfg.crossStyle and 0.25 or 0.6
         sb.BorderSizePixel = 0; sb.AutoButtonColor = false; sb.Font = Enum.Font.GothamBold
         sb.TextSize = 10; sb.TextColor3 = si == cfg.crossStyle and C.accent or C.textMuted
-        sb.Text = sname; sb.Parent = styleRow; mkCorner(sb, 6)
+        sb.Text = sname; sb.Parent = styleRow; inst("UICorner", sb).CornerRadius = UDim.new(0, 10)
+        local sbSk = inst("UIStroke", sb); sbSk.Color = C.border; sbSk.Thickness = 1; sbSk.Transparency = 0.6
+        sbSk.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
         local sbsk = Instance.new("UIStroke", sb); sbsk.Color = si == cfg.crossStyle and C.accent or C.border; sbsk.Thickness = 1
         styleBtns[si] = { btn = sb, sk = sbsk }
         sb.MouseButton1Click:Connect(function()
@@ -1648,7 +1669,9 @@ do local tab = obj.tabFrames["players"]; if tab then
     searchBox.BackgroundColor3 = C.glass; searchBox.BackgroundTransparency = 0.35; searchBox.BorderSizePixel = 0
     searchBox.Font = Enum.Font.GothamMedium; searchBox.TextSize = 13; searchBox.TextColor3 = C.text
     searchBox.PlaceholderText = "🔍 Search players..."; searchBox.PlaceholderColor3 = C.textMuted
-    searchBox.TextXAlignment = Enum.TextXAlignment.Left; searchBox.ClearTextOnFocus = false; searchBox.Parent = searchFrame; mkCorner(searchBox, 8)
+    searchBox.TextXAlignment = Enum.TextXAlignment.Left; searchBox.ClearTextOnFocus = false; searchBox.Parent = searchFrame; inst("UICorner", searchBox).CornerRadius = UDim.new(0, 10)
+    local sbSk = inst("UIStroke", searchBox); sbSk.Color = C.border; sbSk.Thickness = 1; sbSk.Transparency = 0.6
+    sbSk.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
     local searchStroke = Instance.new("UIStroke", searchBox); searchStroke.Color = C.border; searchStroke.Thickness = 1
     local searchPad = Instance.new("UIPadding", searchBox); searchPad.PaddingLeft = UDim.new(0, 10)
     obj.playerSearchBox = searchBox
@@ -1880,7 +1903,9 @@ do local tab = obj.tabFrames["style"]; if tab then
     pfInput.BackgroundColor3 = C.glass; pfInput.BackgroundTransparency = 0.35; pfInput.BorderSizePixel = 0
     pfInput.Font = Enum.Font.GothamMedium; pfInput.TextSize = 12; pfInput.TextColor3 = C.text
     pfInput.PlaceholderText = "Profile name..."; pfInput.PlaceholderColor3 = C.textMuted
-    pfInput.TextXAlignment = Enum.TextXAlignment.Left; pfInput.ClearTextOnFocus = false; pfInput.Parent = pfNameFrame; mkCorner(pfInput, 8)
+    pfInput.TextXAlignment = Enum.TextXAlignment.Left; pfInput.ClearTextOnFocus = false; pfInput.Parent = pfNameFrame; inst("UICorner", pfInput).CornerRadius = UDim.new(0, 10)
+    local pfSk = inst("UIStroke", pfInput); pfSk.Color = C.border; pfSk.Thickness = 1; pfSk.Transparency = 0.6
+    pfSk.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
     local pfInputStroke = Instance.new("UIStroke", pfInput); pfInputStroke.Color = C.border; pfInputStroke.Thickness = 1
     local pfInputPad = Instance.new("UIPadding", pfInput); pfInputPad.PaddingLeft = UDim.new(0, 10)
 
@@ -1891,7 +1916,9 @@ do local tab = obj.tabFrames["style"]; if tab then
     local pfSaveBtn = Instance.new("TextButton"); pfSaveBtn.Size = UDim2.new(0, 80, 0, 30); pfSaveBtn.Position = UDim2.new(1, -80, 0, 2)
     pfSaveBtn.BackgroundColor3 = C.accent; pfSaveBtn.BackgroundTransparency = 0.2; pfSaveBtn.BorderSizePixel = 0; pfSaveBtn.AutoButtonColor = false
     pfSaveBtn.Font = Enum.Font.GothamBold; pfSaveBtn.TextSize = 11; pfSaveBtn.TextColor3 = Color3.new(1,1,1); pfSaveBtn.Text = "💾 SAVE"
-    pfSaveBtn.Parent = pfNameFrame; mkCorner(pfSaveBtn, 8)
+    pfSaveBtn.Parent = pfNameFrame; inst("UICorner", pfSaveBtn).CornerRadius = UDim.new(0, 10)
+    local psSk = inst("UIStroke", pfSaveBtn); psSk.Color = C.border; psSk.Thickness = 1; psSk.Transparency = 0.6
+    psSk.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
     Instance.new("UIStroke", pfSaveBtn).Color = C.accent; pfSaveBtn:FindFirstChildWhichIsA("UIStroke").Thickness = 1
 
     -- Profiles scroll list
@@ -1902,7 +1929,9 @@ do local tab = obj.tabFrames["style"]; if tab then
     local pfScroll = Instance.new("ScrollingFrame"); pfScroll.Size = UDim2.new(1, 0, 0, 150); pfScroll.LayoutOrder = 3
     pfScroll.BackgroundColor3 = C.glass; pfScroll.BackgroundTransparency = 0.5; pfScroll.BorderSizePixel = 0
     pfScroll.ScrollBarThickness = 3; pfScroll.ScrollBarImageColor3 = C.accent; pfScroll.ScrollBarImageTransparency = 0.4
-    pfScroll.CanvasSize = UDim2.new(0, 0, 0, 0); pfScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y; pfScroll.Parent = pfInner; mkCorner(pfScroll, 8)
+    pfScroll.CanvasSize = UDim2.new(0, 0, 0, 0); pfScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y; pfScroll.Parent = pfInner; inst("UICorner", pfScroll).CornerRadius = UDim.new(0, 10)
+    local pfsSk = inst("UIStroke", pfScroll); pfsSk.Color = C.border; pfsSk.Thickness = 1; pfsSk.Transparency = 0.6
+    pfsSk.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
     Instance.new("UIStroke", pfScroll).Color = C.border
     local pfScrollList = Instance.new("UIListLayout", pfScroll); pfScrollList.Padding = UDim.new(0, 3)
     local pfScrollPad = Instance.new("UIPadding", pfScroll); pfScrollPad.PaddingTop = UDim.new(0, 4); pfScrollPad.PaddingBottom = UDim.new(0, 4)
@@ -1919,7 +1948,9 @@ do local tab = obj.tabFrames["style"]; if tab then
         else
             for i, name in ipairs(profiles) do
                 local row = Instance.new("Frame"); row.Size = UDim2.new(1, 0, 0, 32)
-                row.BackgroundColor3 = C.glass; row.BackgroundTransparency = 0.4; row.BorderSizePixel = 0; row.Parent = pfScroll; mkCorner(row, 6)
+                row.BackgroundColor3 = C.glass; row.BackgroundTransparency = 0.4; row.BorderSizePixel = 0; row.Parent = pfScroll; inst("UICorner", row).CornerRadius = UDim.new(0, 10)
+                local rowSk = inst("UIStroke", row); rowSk.Color = C.border; rowSk.Thickness = 1; rowSk.Transparency = 0.6
+                rowSk.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
                 -- Profile name
                 local nl = Instance.new("TextLabel"); nl.Size = UDim2.new(1, -110, 1, 0); nl.Position = UDim2.new(0, 8, 0, 0)
                 nl.BackgroundTransparency = 1; nl.Font = Enum.Font.GothamMedium; nl.TextSize = 11; nl.TextColor3 = C.text
@@ -1927,11 +1958,17 @@ do local tab = obj.tabFrames["style"]; if tab then
                 -- Load button
                 local lb = Instance.new("TextButton"); lb.Size = UDim2.new(0, 48, 0, 24); lb.Position = UDim2.new(1, -104, 0.5, -12)
                 lb.BackgroundColor3 = C.success; lb.BackgroundTransparency = 0.3; lb.BorderSizePixel = 0; lb.AutoButtonColor = false
-                lb.Font = Enum.Font.GothamBold; lb.TextSize = 10; lb.TextColor3 = Color3.new(1,1,1); lb.Text = "LOAD"; lb.Parent = row; mkCorner(lb, 5)
+                lb.Font = Enum.Font.GothamBold; lb.TextSize = 10; lb.TextColor3 = Color3.new(1,1,1); lb.Text = "LOAD"; lb.Parent = row
+                inst("UICorner", lb).CornerRadius = UDim.new(0, 8)
+                local lbSk = inst("UIStroke", lb); lbSk.Color = C.success; lbSk.Thickness = 1; lbSk.Transparency = 0.4
+                lbSk.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
                 -- Delete button
                 local db = Instance.new("TextButton"); db.Size = UDim2.new(0, 48, 0, 24); db.Position = UDim2.new(1, -52, 0.5, -12)
                 db.BackgroundColor3 = C.error; db.BackgroundTransparency = 0.3; db.BorderSizePixel = 0; db.AutoButtonColor = false
-                db.Font = Enum.Font.GothamBold; db.TextSize = 10; db.TextColor3 = Color3.new(1,1,1); db.Text = "DEL"; db.Parent = row; mkCorner(db, 5)
+                db.Font = Enum.Font.GothamBold; db.TextSize = 10; db.TextColor3 = Color3.new(1,1,1); db.Text = "DEL"; db.Parent = row
+                inst("UICorner", db).CornerRadius = UDim.new(0, 8)
+                local dbSk = inst("UIStroke", db); dbSk.Color = C.error; dbSk.Thickness = 1; dbSk.Transparency = 0.4
+                dbSk.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
                 -- Hover effects
                 local pName = name
                 row.MouseEnter:Connect(function() TS:Create(row, TweenInfo.new(0.15), { BackgroundTransparency = 0.2 }):Play() end)
