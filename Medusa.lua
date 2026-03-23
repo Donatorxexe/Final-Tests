@@ -1,4 +1,28 @@
-local Medusa = { cfg = {}, st = {}, obj = {} }
+--[[
+    ╔══════════════════════════════════════════════════════════════╗
+     ║       🐍 MEDUSA v15.1.8 — CINEMATIC EDITION 🐍            ║
+    ║                Made by .donatorexe.                         ║
+    ║           Xeno Executor Optimized | .lua                    ║
+    ╠══════════════════════════════════════════════════════════════╣
+    ║  Layout: Horizontal Dashboard + 2-Column Content            ║
+    ║  Combat: Aimbot + Silent v2 (Curve) + Trigger + Prediction  ║
+    ║  Vision: ESP + 3D Box + Tracers + Skeleton + View Angles    ║
+    ║  Motion: Fly + Noclip + Speed + InfJump + SpinBot           ║
+    ║  HUD: Target Predador + Kill Popup + Hit Sound + Spectators ║
+    ║  Sound: UI Click/Tab Sounds + Hit Sound Feedback            ║
+    ║  Alive: Active HUD + Custom Cursor + Cinematic Intro       ║
+    ║  Engine: RGB Glow + 8 Themes + GUI Editor + Auto-Save       ║
+    ║  Style: RGB Pickers + Roundness + Transparency + Profiles   ║
+    ╚══════════════════════════════════════════════════════════════╝
+    
+    Loadstring:
+      loadstring(game:HttpGet("URL_DO_RAW/Medusa.lua"))()
+    
+    Hotkeys: T=ESP G=Aimbot F=Fly H=Hitbox U=Noclip
+             J=Silent K=Trigger M=Speed N=InfJump
+             L=Fullbright C=Crosshair Y=GUI P=Eject
+             End=Panic  RMB=Lock Target
+--]]
 
 -- S1: ANTI-DUPLICATE
 if getgenv and getgenv().MedusaLoaded then
@@ -7,7 +31,15 @@ if getgenv and getgenv().MedusaLoaded then
 end
 if getgenv then getgenv().MedusaLoaded = true end
 
--- S2: SERVICES & POLYFILLS
+-- S2: POLYFILLS & XENO COMPATIBILITY
+if not task or not task.wait then
+    task = task or {}
+    task.wait = task.wait or wait
+    task.spawn = task.spawn or function(f) local co = coroutine.create(f); coroutine.resume(co); return co end
+    task.delay = task.delay or function(t, f) local co = coroutine.create(function() wait(t); f() end); coroutine.resume(co); return co end
+    task.cancel = task.cancel or function() end
+end
+
 local function getService(name) local ok, svc = pcall(function() return game:GetService(name) end); return ok and svc or nil end
 
 local Players = getService("Players")
@@ -25,60 +57,93 @@ local Lighting = getService("Lighting")
 local SoundService = getService("SoundService")
 local LocalizationService = getService("LocalizationService")
 
-if not task or not task.wait then
-    task = task or {}
-    task.wait = task.wait or wait
-    task.spawn = task.spawn or function(f) local co = coroutine.create(f); coroutine.resume(co); return co end
-    task.delay = task.delay or function(t, f) local co = coroutine.create(function() wait(t); f() end); coroutine.resume(co); return co end
-    task.cancel = task.cancel or function() end
-end
-
 local UIS = UserInputService
 local TS = TweenService
 
--- S2B: STABILITY GUARDS
-if not Players or not Workspace or not RunService or not TweenService then
-    warn("[Medusa] Missing required services; aborting.")
-    return
+-- ── UI Sound System (v15.1) ────────────────────────────────
+local function createSound(id, volume, pitch)
+    local s = Instance.new("Sound")
+    s.SoundId = "rbxassetid://" .. tostring(id)
+    s.Volume = volume or 0.3; s.PlaybackSpeed = pitch or 1
+    pcall(function() s.Parent = SoundService or game end)
+    return s
 end
 
-local function waitForLocalPlayer(timeout)
-    local t0 = tick()
-    while not Players.LocalPlayer do
-        if timeout and (tick() - t0) > timeout then return nil end
-        task.wait()
-    end
-    return Players.LocalPlayer
-end
+local uiClickSound = createSound(6895079853, 0.25, 1.1)   -- subtle click
+local uiTabSound = createSound(6895079853, 0.15, 0.75)    -- deeper tab switch
+local uiToggleOnSound = createSound(6895079853, 0.2, 1.3) -- higher pitch ON
+local uiToggleOffSound = createSound(6895079853, 0.2, 0.9) -- lower pitch OFF
 
-local function waitForCamera(timeout)
-    local t0 = tick()
-    while not Workspace.CurrentCamera do
-        if timeout and (tick() - t0) > timeout then return nil end
-        task.wait()
-    end
-    return Workspace.CurrentCamera
-end
+local function playClick() pcall(function() uiClickSound:Play() end) end
+local function playTab() pcall(function() uiTabSound:Play() end) end
+local function playToggleOn() pcall(function() uiToggleOnSound:Play() end) end
+local function playToggleOff() pcall(function() uiToggleOffSound:Play() end) end
 
--- ── UI Sound System (BYPASSED) ──────────────────────────
-local function playClick() end
-local function playTab() end
-local function playToggleOn() end
-local function playToggleOff() end
+-- ── Location Detection (runs ONCE) ──────────────────────────
+local myRegion = "??"   -- Player's own country (from locale)
+local svRegion = "??"   -- Server's actual location (from IP)
 
+task.spawn(function()
+    -- STEP 1: Detect MY location (from client locale — always works)
+    pcall(function()
+        if LocalizationService and LocalizationService.GetCountryRegionForPlayerAsync then
+            local code = LocalizationService:GetCountryRegionForPlayerAsync(Players.LocalPlayer)
+            if code and code ~= "" then myRegion = code end
+        end
+    end)
+    if myRegion == "??" then pcall(function()
+        local lid = (LocalizationService and LocalizationService.SystemLocaleId) or Players.LocalPlayer.LocaleId or ""
+        local r = lid:match("%-(%a%a)$") or lid:match("^(%a%a)$")
+        if r then myRegion = r:upper() end
+    end) end
+
+    -- STEP 2: Detect SERVER location (via HTTP IP geolocation)
+    pcall(function()
+        local httpGet = game.HttpGet or (HttpService and HttpService.GetAsync)
+        if not httpGet then svRegion = myRegion; return end
+
+        -- Try ip-api.com first (free, no key needed)
+        local ok, raw = pcall(function() return game:HttpGet("http://ip-api.com/json/?fields=status,country,regionName,city,countryCode") end)
+        if ok and raw and raw ~= "" then
+            local data = HttpService:JSONDecode(raw)
+            if data and data.status == "success" then
+                local cc = data.countryCode or "??"
+                local city = data.city or data.regionName or ""
+                if city ~= "" then
+                    svRegion = cc .. ", " .. city
+                else
+                    svRegion = cc
+                end
+                print("[Medusa] 🌍 Server: " .. svRegion)
+                return
+            end
+        end
+
+        -- Fallback: try ipinfo.io
+        local ok2, raw2 = pcall(function() return game:HttpGet("https://ipinfo.io/json") end)
+        if ok2 and raw2 and raw2 ~= "" then
+            local data2 = HttpService:JSONDecode(raw2)
+            if data2 then
+                local country = data2.country or "??"
+                local city = data2.city or ""
+                svRegion = city ~= "" and (country .. ", " .. city) or country
+                print("[Medusa] 🌍 Server (ipinfo): " .. svRegion)
+                return
+            end
+        end
+
+        -- Final fallback: use my region as server region
+        svRegion = myRegion ~= "??" and myRegion or "LIVE"
+    end)
+
+    if svRegion == "??" then svRegion = myRegion ~= "??" and myRegion or "LIVE" end
+    print("[Medusa] 👤 ME: " .. myRegion .. " | 🖥️ SV: " .. svRegion)
+end)
 local RS = RunService
 
-local player = waitForLocalPlayer(15) or Players.LocalPlayer
-if not player then
-    warn("[Medusa] LocalPlayer not available; aborting to avoid nil crashes.")
-    return
-end
-local playerGui = player:FindFirstChild("PlayerGui") or player:WaitForChild("PlayerGui", 15)
-if not playerGui then
-    warn("[Medusa] PlayerGui not available; aborting to avoid nil crashes.")
-    return
-end
-local camera = waitForCamera(15) or Workspace.CurrentCamera
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+local camera = Workspace.CurrentCamera
 local mouse = player:GetMouse()
 
 local XC = {
@@ -515,8 +580,8 @@ local function createGui(name)
     sg.Name = name or ("Medusa_" .. math.random(100000, 999999))
     sg.ResetOnSpawn = false; sg.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     sg.DisplayOrder = 2147483647; sg.IgnoreGuiInset = true
-    local ok = pcall(function() sg.Parent = guiParent or CoreGui or playerGui end)
-    if not ok then pcall(function() sg.Parent = CoreGui end); if not sg.Parent then pcall(function() sg.Parent = playerGui end) end end
+    local ok = pcall(function() sg.Parent = guiParent end)
+    if not ok then pcall(function() sg.Parent = CoreGui end); if not sg.Parent then sg.Parent = playerGui end end
     pcall(function() if protect_gui then protect_gui(sg) elseif syn and syn.protect_gui then syn.protect_gui(sg) end end)
     return sg
 end
@@ -529,14 +594,10 @@ local function spDisable() end
 local CR = cfg.gui.cornerRadius
 
 local function mkCorner(parent, radius)
-    local c = Instance.new("UICorner")
-    c.CornerRadius = UDim.new(0, radius or CR)
-    c.Parent = parent
-    return c
+    local c = Instance.new("UICorner", parent); c.CornerRadius = UDim.new(0, radius or CR); return c
 end
 
 local function mkCard(parent, height, order)
-    if not parent then return end
     local c = Instance.new("Frame")
     c.Size = UDim2.new(1, 0, 0, height)
     c.AutomaticSize = Enum.AutomaticSize.Y -- auto-grow if content overflows
@@ -557,7 +618,6 @@ local function mkCard(parent, height, order)
 end
 
 local function mkLabel(parent, text, size, color, x, y, w, h)
-    if not parent then return end
     local l = Instance.new("TextLabel")
     l.Size = UDim2.new(w or 1, w == 1 and -20 or 0, 0, h or 20)
     l.Position = UDim2.new(0, x or 10, 0, y or 8)
@@ -568,7 +628,6 @@ local function mkLabel(parent, text, size, color, x, y, w, h)
 end
 
 local function mkSep(parent, order)
-    if not parent then return end
     local s = Instance.new("Frame")
     s.Size = UDim2.new(1, -20, 0, 1); s.Position = UDim2.new(0, 10, 0, 0)
     s.BackgroundColor3 = C.border; s.BackgroundTransparency = 0.6
@@ -578,7 +637,6 @@ end
 
 -- ── GLASS TOGGLE ───────────────────────────────────────────
 local function mkToggle(parent, text, default, order, callback)
-    if not parent then return end
     local TW, TH = cfg.gui.toggleW, cfg.gui.toggleH
 
     local row = Instance.new("Frame")
@@ -701,7 +759,6 @@ end
 
 -- ── GLASS SLIDER ───────────────────────────────────────────
 local function mkSlider(parent, text, initVal, minV, maxV, order, callback)
-    if not parent then return end
     local row = Instance.new("Frame")
     row.Size = UDim2.new(1, 0, 0, 48)
     row.BackgroundColor3 = C.glassHi; row.BackgroundTransparency = 0.88
@@ -785,7 +842,6 @@ end
 
 -- ── GLASS BUTTON ───────────────────────────────────────────
 local function mkBtn(parent, text, color, order, callback)
-    if not parent then return end
     local ac = color or C.accent
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(1, 0, 0, cfg.gui.btnH)
@@ -827,7 +883,6 @@ local function mkBtn(parent, text, color, order, callback)
 end
 
 local function mkPartSelector(parent, order)
-    if not parent then return end
     local row = Instance.new("Frame")
     row.Size = UDim2.new(1, 0, 0, 34); row.BackgroundTransparency = 1
     row.LayoutOrder = order or 0; row.Parent = parent
@@ -866,56 +921,152 @@ local notifStack = {}
 local MAX_NOTIFS = 5
 
 -- Premium Notification System v15.1
+-- Notify(title, text, duration) OR notify(text, color) (backwards compatible)
 local function Notify(titleOrText, textOrColor, durationOrNil)
     local title, text, color, duration
+    -- Backwards compatibility: notify(text, color) still works
     if type(textOrColor) == "userdata" or textOrColor == nil then
-        title = "🐍 MEDUSA"; text = tostring(titleOrText); color = textOrColor or C.accent; duration = durationOrNil or 3.5
+        title = "🐍 MEDUSA"
+        text = tostring(titleOrText)
+        color = textOrColor or C.accent
+        duration = durationOrNil or 3.5
     else
-        title = tostring(titleOrText); text = tostring(textOrColor); color = C.accent; duration = durationOrNil or 4
+        title = tostring(titleOrText)
+        text = tostring(textOrColor)
+        color = C.accent
+        duration = durationOrNil or 4
     end
 
     local sg = createGui("MedusaNotif")
     local fr = Instance.new("Frame")
-    fr.Size = UDim2.new(0, 340, 0, 78); fr.Position = UDim2.new(1, 360, 1, -90); fr.BackgroundColor3 = C.glass; fr.BackgroundTransparency = 0.06; fr.BorderSizePixel = 0; fr.Parent = sg; mkCorner(fr, 12)
+    fr.Size = UDim2.new(0, 340, 0, 78)
+    fr.Position = UDim2.new(1, 360, 1, -90 - (#notifStack * 86))
+    fr.BackgroundColor3 = C.glass; fr.BackgroundTransparency = 0.06
+    fr.BorderSizePixel = 0; fr.Parent = sg
+    mkCorner(fr, 12)
     
+    -- Toast stroke — uses accent color with rainbow support
     local sk = Instance.new("UIStroke", fr); sk.Color = color; sk.Thickness = 1.5; sk.Transparency = 0.1
-    if cfg.rgb.stroke then table.insert(obj.rgbElements, { obj = sk, prop = "Color", type = "stroke" }) end
+    -- Register for rainbow if RGB is on
+    if cfg.rgb.stroke then
+        table.insert(obj.rgbElements, { obj = sk, prop = "Color", type = "stroke" })
+    end
 
-    local grad = Instance.new("UIGradient", fr); grad.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(30, 30, 40)), ColorSequenceKeypoint.new(0.5, C.glass), ColorSequenceKeypoint.new(1, C.bg)}); grad.Rotation = 145
-    local bar = Instance.new("Frame"); bar.Size = UDim2.new(0, 3, 0, 0); bar.Position = UDim2.new(0, 8, 0.1, 0); bar.BackgroundColor3 = color; bar.BorderSizePixel = 0; bar.Parent = fr; mkCorner(bar, 2)
-    TS:Create(bar, TweenInfo.new(0.4, Enum.EasingStyle.Back), { Size = UDim2.new(0, 3, 0.8, 0) }):Play()
+    -- Glass gradient (premium)
+    local grad = Instance.new("UIGradient", fr)
+    grad.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(30, 30, 40)),
+        ColorSequenceKeypoint.new(0.5, C.glass),
+        ColorSequenceKeypoint.new(1, C.bg)
+    })
+    grad.Rotation = 145
 
-    local barGlow = Instance.new("Frame"); barGlow.Size = UDim2.new(0, 14, 0.8, 0); barGlow.Position = UDim2.new(0, 4, 0.1, 0); barGlow.BackgroundColor3 = color; barGlow.BackgroundTransparency = 0.75; barGlow.BorderSizePixel = 0; barGlow.ZIndex = 0; barGlow.Parent = fr; mkCorner(barGlow, 6)
-    local iconDot = Instance.new("Frame"); iconDot.Size = UDim2.new(0, 6, 0, 6); iconDot.Position = UDim2.new(0, 20, 0, 12); iconDot.BackgroundColor3 = color; iconDot.BorderSizePixel = 0; iconDot.Parent = fr; mkCorner(iconDot, 3)
-    local titleLbl = Instance.new("TextLabel"); titleLbl.Size = UDim2.new(1, -44, 0, 16); titleLbl.Position = UDim2.new(0, 30, 0, 8); titleLbl.BackgroundTransparency = 1; titleLbl.Font = Enum.Font.GothamBlack; titleLbl.TextSize = 11; titleLbl.TextColor3 = color; titleLbl.TextXAlignment = Enum.TextXAlignment.Left; titleLbl.Text = title; titleLbl.Parent = fr
-    local lbl = Instance.new("TextLabel"); lbl.Size = UDim2.new(1, -44, 0, 22); lbl.Position = UDim2.new(0, 30, 0, 26); lbl.BackgroundTransparency = 1; lbl.Font = Enum.Font.GothamSemibold; lbl.TextSize = 13; lbl.TextColor3 = Color3.new(1, 1, 1); lbl.TextXAlignment = Enum.TextXAlignment.Left; lbl.TextWrapped = true; lbl.Text = text; lbl.Parent = fr
-    local timeLbl = Instance.new("TextLabel"); timeLbl.Size = UDim2.new(1, -44, 0, 12); timeLbl.Position = UDim2.new(0, 30, 0, 50); timeLbl.BackgroundTransparency = 1; timeLbl.Font = Enum.Font.Gotham; timeLbl.TextSize = 9; timeLbl.TextColor3 = C.textMuted; timeLbl.TextXAlignment = Enum.TextXAlignment.Left; timeLbl.Text = "MEDUSA v15.1 • " .. os.date("%H:%M:%S"); timeLbl.Parent = fr
+    -- Left accent neon bar (animated — grows in from top)
+    local bar = Instance.new("Frame")
+    bar.Size = UDim2.new(0, 3, 0, 0); bar.Position = UDim2.new(0, 8, 0.1, 0)
+    bar.BackgroundColor3 = color; bar.BorderSizePixel = 0; bar.Parent = fr
+    mkCorner(bar, 2)
+    TS:Create(bar, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        Size = UDim2.new(0, 3, 0.8, 0)
+    }):Play()
 
-    local progTrack = Instance.new("Frame"); progTrack.Size = UDim2.new(1, -24, 0, 3); progTrack.Position = UDim2.new(0, 12, 1, -8); progTrack.BackgroundColor3 = Color3.fromRGB(40, 40, 50); progTrack.BackgroundTransparency = 0.4; progTrack.BorderSizePixel = 0; progTrack.Parent = fr; mkCorner(progTrack, 2)
-    local progFill = Instance.new("Frame"); progFill.Size = UDim2.new(1, 0, 1, 0); progFill.BackgroundColor3 = color; progFill.BackgroundTransparency = 0.15; progFill.BorderSizePixel = 0; progFill.Parent = progTrack; mkCorner(progFill, 2)
+    -- Neon glow behind bar
+    local barGlow = Instance.new("Frame")
+    barGlow.Size = UDim2.new(0, 14, 0.8, 0); barGlow.Position = UDim2.new(0, 4, 0.1, 0)
+    barGlow.BackgroundColor3 = color; barGlow.BackgroundTransparency = 0.75
+    barGlow.BorderSizePixel = 0; barGlow.ZIndex = 0; barGlow.Parent = fr
+    mkCorner(barGlow, 6)
+
+    -- Icon circle (accent colored dot)
+    local iconDot = Instance.new("Frame")
+    iconDot.Size = UDim2.new(0, 6, 0, 6); iconDot.Position = UDim2.new(0, 20, 0, 12)
+    iconDot.BackgroundColor3 = color; iconDot.BorderSizePixel = 0; iconDot.Parent = fr
+    mkCorner(iconDot, 3)
+
+    -- Title label (bold + icon)
+    local titleLbl = Instance.new("TextLabel")
+    titleLbl.Size = UDim2.new(1, -44, 0, 16); titleLbl.Position = UDim2.new(0, 30, 0, 8)
+    titleLbl.BackgroundTransparency = 1; titleLbl.Font = Enum.Font.GothamBlack
+    titleLbl.TextSize = 11; titleLbl.TextColor3 = color
+    titleLbl.TextXAlignment = Enum.TextXAlignment.Left; titleLbl.Text = title; titleLbl.Parent = fr
+
+    -- Main text (message)
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(1, -44, 0, 22); lbl.Position = UDim2.new(0, 30, 0, 26)
+    lbl.BackgroundTransparency = 1; lbl.Font = Enum.Font.GothamSemibold
+    lbl.TextSize = 13; lbl.TextColor3 = Color3.new(1, 1, 1)
+    lbl.TextXAlignment = Enum.TextXAlignment.Left; lbl.TextWrapped = true
+    lbl.Text = text; lbl.Parent = fr
+
+    -- Timestamp + version
+    local timeLbl = Instance.new("TextLabel")
+    timeLbl.Size = UDim2.new(1, -44, 0, 12); timeLbl.Position = UDim2.new(0, 30, 0, 50)
+    timeLbl.BackgroundTransparency = 1; timeLbl.Font = Enum.Font.Gotham
+    timeLbl.TextSize = 9; timeLbl.TextColor3 = C.textMuted
+    timeLbl.TextXAlignment = Enum.TextXAlignment.Left
+    timeLbl.Text = "MEDUSA v15.1 • " .. os.date("%H:%M:%S"); timeLbl.Parent = fr
+
+    -- Progress bar (premium — glass track + colored fill that shrinks)
+    local progTrack = Instance.new("Frame")
+    progTrack.Size = UDim2.new(1, -24, 0, 3); progTrack.Position = UDim2.new(0, 12, 1, -8)
+    progTrack.BackgroundColor3 = Color3.fromRGB(40, 40, 50); progTrack.BackgroundTransparency = 0.4
+    progTrack.BorderSizePixel = 0; progTrack.Parent = fr
+    mkCorner(progTrack, 2)
+
+    local progFill = Instance.new("Frame")
+    progFill.Size = UDim2.new(1, 0, 1, 0)
+    progFill.BackgroundColor3 = color; progFill.BackgroundTransparency = 0.15
+    progFill.BorderSizePixel = 0; progFill.Parent = progTrack
+    mkCorner(progFill, 2)
     TS:Create(progFill, TweenInfo.new(duration, Enum.EasingStyle.Linear), { Size = UDim2.new(0, 0, 1, 0) }):Play()
 
-    local closeN = Instance.new("TextButton"); closeN.Size = UDim2.new(0, 22, 0, 22); closeN.Position = UDim2.new(1, -28, 0, 4); closeN.BackgroundTransparency = 1; closeN.Font = Enum.Font.GothamBold; closeN.TextSize = 14; closeN.TextColor3 = C.textMuted; closeN.Text = "×"; closeN.AutoButtonColor = false; closeN.Parent = fr
+    -- Close button (X) with hover
+    local closeN = Instance.new("TextButton")
+    closeN.Size = UDim2.new(0, 22, 0, 22); closeN.Position = UDim2.new(1, -28, 0, 4)
+    closeN.BackgroundTransparency = 1; closeN.Font = Enum.Font.GothamBold
+    closeN.TextSize = 14; closeN.TextColor3 = C.textMuted; closeN.Text = "×"
+    closeN.AutoButtonColor = false; closeN.Parent = fr
     closeN.MouseEnter:Connect(function() TS:Create(closeN, TweenInfo.new(0.15), { TextColor3 = C.error }):Play() end)
     closeN.MouseLeave:Connect(function() TS:Create(closeN, TweenInfo.new(0.15), { TextColor3 = C.textMuted }):Play() end)
 
+    -- Stack management
     table.insert(notifStack, { gui = sg, frame = fr })
     if #notifStack > MAX_NOTIFS then local old = table.remove(notifStack, 1); pcall(function() old.gui:Destroy() end) end
-    for i, n in ipairs(notifStack) do TS:Create(n.frame, TweenInfo.new(0.4, Enum.EasingStyle.Back), { Position = UDim2.new(1, -360, 1, -90 - ((#notifStack - i) * 86)) }):Play() end
+    for i, n in ipairs(notifStack) do
+        TS:Create(n.frame, TweenInfo.new(0.4, Enum.EasingStyle.Back), {
+            Position = UDim2.new(1, -360, 1, -90 - ((#notifStack - i) * 86))
+        }):Play()
+    end
+    -- Slide in from right (premium elastic bounce)
+    fr:TweenPosition(UDim2.new(1, -360, 1, -90), Enum.EasingDirection.Out, Enum.EasingStyle.Back, 0.5, true)
 
+    -- Auto-dismiss function (premium slide-out + fade)
     local function dismissNotif()
-        TS:Create(fr, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.In), { Position = UDim2.new(1, 380, fr.Position.Y.Scale, fr.Position.Y.Offset), BackgroundTransparency = 1 }):Play()
+        -- Slide out to the right with fade
+        TS:Create(fr, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
+            Position = UDim2.new(1, 380, fr.Position.Y.Scale, fr.Position.Y.Offset),
+            BackgroundTransparency = 1,
+        }):Play()
         TS:Create(sk, TweenInfo.new(0.35), { Transparency = 1 }):Play()
         TS:Create(bar, TweenInfo.new(0.3), { BackgroundTransparency = 1 }):Play()
         TS:Create(barGlow, TweenInfo.new(0.3), { BackgroundTransparency = 1 }):Play()
         task.wait(0.5)
         for i, n in ipairs(notifStack) do if n.gui == sg then table.remove(notifStack, i); break end end
-        for i, n in ipairs(notifStack) do TS:Create(n.frame, TweenInfo.new(0.35, Enum.EasingStyle.Quint), { Position = UDim2.new(1, -360, 1, -90 - ((#notifStack - i) * 86)) }):Play() end
+        -- Restack remaining with smooth animation
+        for i, n in ipairs(notifStack) do
+            TS:Create(n.frame, TweenInfo.new(0.35, Enum.EasingStyle.Quint), {
+                Position = UDim2.new(1, -360, 1, -90 - ((#notifStack - i) * 86))
+            }):Play()
+        end
         pcall(function() sg:Destroy() end)
     end
+
+    -- Close button click
     closeN.MouseButton1Click:Connect(function() task.spawn(dismissNotif) end)
+    -- Auto-dismiss after duration
     task.delay(duration, function() if sg and sg.Parent then dismissNotif() end end)
 end
+-- Backwards compatible alias
 local notify = Notify
 
 -- ══════════════════════════════════════════════════════════════
@@ -963,7 +1114,6 @@ end
 -- ══════════════════════════════════════════════════════════════
 --  S10: GLASS MAIN GUI
 -- ══════════════════════════════════════════════════════════════
-if not game:IsLoaded() then game.Loaded:Wait() end
 local screenGui = createGui("MedusaMain")
 obj.wmGui = screenGui
 
@@ -1169,7 +1319,7 @@ end
 
 -- ── Slide Transition switchTab ─────────────────────────────
 local function switchTab(id)
-    if typeof(playTab) == "function" then playTab() end
+    playTab()
     local prevTab = obj.currentTab
     obj.currentTab = id
     for _, tab in ipairs(TABS) do
@@ -1196,19 +1346,15 @@ local function switchTab(id)
             -- Position relative to sidebar scroll container
             -- Each tab = 45px height + 10px padding + 8px top padding
             local yPos = 8 + (i - 1) * (45 + 10) + 8
-            if tabIndicator and tabIndicator.Parent then
-                TS:Create(tabIndicator, TweenInfo.new(0.25, Enum.EasingStyle.Back), {
-                    Position = UDim2.new(0, 0, 0, yPos)
-                }):Play()
-            end
+            TS:Create(tabIndicator, TweenInfo.new(0.25, Enum.EasingStyle.Back), {
+                Position = UDim2.new(0, 0, 0, yPos)
+            }):Play()
             -- Auto-scroll sidebar to show the active tab
             pcall(function()
-                if sidebar and sidebar.Parent then
-                    local maxScroll = sidebar.AbsoluteCanvasSize.Y - sidebar.AbsoluteSize.Y
-                    if maxScroll > 0 then
-                        local scrollTo = math.clamp(yPos - sidebar.AbsoluteSize.Y / 2, 0, maxScroll)
-                        sidebar.CanvasPosition = Vector2.new(0, scrollTo)
-                    end
+                local maxScroll = sidebar.AbsoluteCanvasSize.Y - sidebar.AbsoluteSize.Y
+                if maxScroll > 0 then
+                    local scrollTo = math.clamp(yPos - sidebar.AbsoluteSize.Y / 2, 0, maxScroll)
+                    sidebar.CanvasPosition = Vector2.new(0, scrollTo)
                 end
             end)
             break
@@ -1228,8 +1374,10 @@ end)
 
 -- FPS Counter
 task.spawn(function()
+    local frames = 0
+    addConn(RS.RenderStepped:Connect(function() frames = frames + 1 end))
     while st.running do
-        task.wait(0.5); obj.wmFps = tostring(globalFrames * 2); globalFrames = 0
+        task.wait(0.5); obj.wmFps = tostring(frames * 2); frames = 0
         pcall(function()
             local stats = getService("Stats")
             if stats then local p = stats:FindFirstChild("PerformanceStats"); if p then local pp = p:FindFirstChild("Ping"); if pp then obj.wmPing = tostring(math.floor(pp:GetValue())) end end end
@@ -1833,12 +1981,10 @@ local function getAimPart(char)
 end
 
 local function predictPosition(part, char)
-    if not part or not part:IsA("BasePart") then return Vector3.zero end
-    if not cfg.prediction then return part.Position end
-    local hrp = char and char:FindFirstChild("HumanoidRootPart"); if not hrp then return part.Position end
+    if not cfg.prediction or not part then return part.Position end
+    local hrp = char:FindFirstChild("HumanoidRootPart"); if not hrp then return part.Position end
     local vel = hrp.AssemblyLinearVelocity or hrp.Velocity or Vector3.zero
-    local camPos = camera and camera.CFrame and camera.CFrame.Position or Vector3.zero
-    return part.Position + vel * ((part.Position - camPos).Magnitude / 1000 * cfg.predStrength)
+    return part.Position + vel * ((part.Position - camera.CFrame.Position).Magnitude / 1000 * cfg.predStrength)
 end
 
 local function closestInFOV()
@@ -1852,53 +1998,21 @@ local function closestInFOV()
     end; return best
 end
 
--- ══════════════════════════════════════════════════════════════
---  S21: CENTRAL TICK ENGINE (v15.2 Optimized)
--- ══════════════════════════════════════════════════════════════
-local globalFrames = 0
-local function updateAimbot()
-    if not camera then camera = Workspace.CurrentCamera end
+-- Aimbot render
+addConn(RS.RenderStepped:Connect(function()
+    if not st.running then return end
     if st.aimbot and rmbDown then
         if obj.lockedTarget and not isValidTarget(obj.lockedTarget) then obj.lockedTarget = nil end
         if not obj.lockedTarget then obj.lockedTarget = closestInFOV() end
     else obj.lockedTarget = nil end
     if st.aimbot and rmbDown and obj.lockedTarget and obj.lockedTarget.Character then
         local part = getAimPart(obj.lockedTarget.Character)
-        if part and camera then
+        if part then
             local tp = predictPosition(part, obj.lockedTarget.Character)
             if cfg.aimSmooth == 0 then camera.CFrame = CFrame.new(camera.CFrame.Position, tp)
             else local t = (1 - cfg.aimSmooth / 100) * 0.93 + 0.02; camera.CFrame = CFrame.new(camera.CFrame.Position, camera.CFrame.Position + camera.CFrame.LookVector:Lerp((tp - camera.CFrame.Position).Unit, t).Unit) end
         end
     end
-end
-
-local function updateMovement()
-    if not player.Character then return end
-    if not camera then camera = Workspace.CurrentCamera end
-    local hum = player.Character:FindFirstChildOfClass("Humanoid")
-    local hrp = player.Character:FindFirstChild("HumanoidRootPart")
-    
-    if st.fly and obj.bv and obj.bg and hrp and camera then
-        local cam = camera.CFrame; local mv = Vector3.zero
-        if UIS:IsKeyDown(Enum.KeyCode.W) then mv = mv + cam.LookVector end
-        if UIS:IsKeyDown(Enum.KeyCode.S) then mv = mv - cam.LookVector end
-        if UIS:IsKeyDown(Enum.KeyCode.A) then mv = mv - cam.RightVector end
-        if UIS:IsKeyDown(Enum.KeyCode.D) then mv = mv + cam.RightVector end
-        if UIS:IsKeyDown(Enum.KeyCode.Space) then mv = mv + Vector3.yAxis end
-        if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then mv = mv - Vector3.yAxis end
-        obj.bv.Velocity = mv.Magnitude > 0 and mv.Unit * cfg.flySpeed or Vector3.zero; obj.bg.CFrame = cam
-    end
-    
-    if hum then
-        if st.speed then hum.WalkSpeed = cfg.walkSpeed end
-        if st.noFallDmg then
-            hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
-            hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
-        end
-    end
-end
-
-local function updateUIElements()
     -- Status pills
     for key, pill in pairs(obj.statusPills) do
         if pill.label and key ~= "lock" and key ~= "espTimer" then
@@ -1918,107 +2032,6 @@ local function updateUIElements()
     if obj.statusPills["espTimer"] and obj.statusPills["espTimer"].label then
         if st.esp then local rem = cfg.espRefreshRate - (os.time() - lastESPRefresh); obj.statusPills["espTimer"].label.Text = string.format("🔄 ESP Refresh: %d:%02d", math.floor(rem / 60), rem % 60)
         else obj.statusPills["espTimer"].label.Text = "🔄 ESP: OFF" end
-    end
-    -- FOV Circle
-    if obj.fovCircle then
-        if st.aimbot and rmbDown then
-            local mp = UIS:GetMouseLocation(); local radius = cfg.aimbotFOV
-            obj.fovCircle.Visible = true; obj.fovCircle.Size = UDim2.new(0, radius * 2, 0, radius * 2); obj.fovCircle.Position = UDim2.new(0, mp.X, 0, mp.Y)
-        else obj.fovCircle.Visible = false end
-    end
-    -- Custom Cursor
-    if obj.cursorFrame then
-        local mp = UIS:GetMouseLocation()
-        local panelObj = obj.panel
-        if panelObj and panelObj.Visible and st.guiVisible then
-            local px, py = panelObj.AbsolutePosition.X, panelObj.AbsolutePosition.Y
-            local pw, ph = panelObj.AbsoluteSize.X, panelObj.AbsoluteSize.Y
-            local isOver = mp.X >= px and mp.X <= px + pw and mp.Y >= py and mp.Y <= py + ph
-            if isOver then
-                obj.cursorFrame.Visible = true; obj.cursorFrame.Position = UDim2.new(0, mp.X, 0, mp.Y)
-                if UIS.MouseIconEnabled then pcall(function() UIS.MouseIconEnabled = false end) end
-            else
-                obj.cursorFrame.Visible = false
-                if not UIS.MouseIconEnabled then pcall(function() UIS.MouseIconEnabled = true end) end
-            end
-        else
-            obj.cursorFrame.Visible = false
-            if not UIS.MouseIconEnabled then pcall(function() UIS.MouseIconEnabled = true end) end
-        end
-    end
-end
-
-local function updateESP()
-    if not st.esp then return end
-    if not camera then camera = Workspace.CurrentCamera end
-    for plr, data in pairs(obj.espObjs) do
-        pcall(function()
-            local char = plr.Character
-            local head = char and char:FindFirstChild("Head")
-            if not char or not char.Parent or not head then
-                pcall(function() if data.hl then data.hl:Destroy() end end)
-                pcall(function() if data.bb then data.bb:Destroy() end end)
-                pcall(function() if data.box then data.box:Destroy() end end)
-                pcall(function() if data.tracerGui then data.tracerGui:Destroy() end end)
-                pcall(function() if data.skelFolder then data.skelFolder:Destroy() end end)
-                pcall(function() if data.viewPart then data.viewPart:Destroy() end end)
-                obj.espObjs[plr] = nil
-                return
-            end
-            
-            if not camera then return end
-            local camPos = camera.CFrame.Position
-            local dist = (head.Position - camPos).Magnitude
-            if data.distLabel then data.distLabel.Text = math.floor(dist) .. "m" end
-            
-            local hum = char:FindFirstChildOfClass("Humanoid")
-            if hum and data.hpFill and hum.MaxHealth > 0 then
-                local pct = math.clamp(hum.Health / hum.MaxHealth, 0, 1)
-                data.hpFill.Size = UDim2.new(pct, 0, 1, 0)
-                data.hpFill.BackgroundColor3 = pct > 0.5 and C.success or pct > 0.25 and C.warning or C.error
-            end
-            
-            if data.viewPart then
-                if st.viewAngles then
-                    data.viewPart.CFrame = head.CFrame * CFrame.new(0, 0, -2.5)
-                    data.viewPart.Transparency = 0.35
-                else data.viewPart.Transparency = 1 end
-            end
-            
-            if data.tracerLine and data.tracerGui then
-                local vp = camera.ViewportSize
-                local sp, onScreen = camera:WorldToViewportPoint(head.Position)
-                if onScreen and st.tracers then
-                    data.tracerLine.Visible = true
-                    local startX, startY = vp.X / 2, vp.Y
-                    local endX, endY = sp.X, sp.Y
-                    local dx, dy = endX - startX, endY - startY
-                    local dist2 = math.sqrt(dx * dx + dy * dy)
-                    local angle = math.atan2(dy, dx)
-                    data.tracerLine.Size = UDim2.new(0, dist2, 0, 1)
-                    data.tracerLine.Position = UDim2.new(0, startX, 0, startY)
-                    data.tracerLine.Rotation = math.deg(angle)
-                else data.tracerLine.Visible = false end
-            end
-        end)
-    end
-end
-
-addConn(RS.RenderStepped:Connect(function()
-    local ok = pcall(function()
-        if not st.running then return end
-        if not player or not player.Parent then return end
-        if not Workspace or not Workspace.Parent then return end
-        if not camera or camera ~= Workspace.CurrentCamera then camera = Workspace.CurrentCamera end
-        if not camera then return end
-        globalFrames = (globalFrames or 0) + 1
-        pcall(function() updateAimbot() end)
-        pcall(function() updateMovement() end)
-        pcall(function() updateUIElements() end)
-        pcall(function() updateESP() end)
-    end)
-    if not ok then
-        -- swallow to keep RenderStepped thread alive
     end
 end))
 
@@ -2071,7 +2084,6 @@ if XC.hookmetamethod then pcall(function()
                 if key == "WalkSpeed" then return 16 end
                 if key == "JumpPower" then return 50 end
                 if key == "JumpHeight" then return 7.2 end
-                if key == "HipHeight" then return 2 end
             end
             if self == myHRP then
                 if key == "Velocity" then return Vector3.zero end
@@ -2098,40 +2110,35 @@ if XC.hookmetamethod then pcall(function()
     end)
     local oldNc; oldNc = hookmetamethod(game, "__namecall", function(self, ...)
         local method = getnamecallmethod()
-        local args = {...}
         -- S26B: ANTI-ADONIS — block remote kick/ban/punish calls
         if st.metatableBypass and not checkcaller() then
             if method == "Kick" and self == player then return end
-            if method == "GetAttribute" and self == myHumanoid then
-                local attr = args[1]
-                if attr == "WalkSpeed" then return 16 end
-                if attr == "JumpPower" then return 50 end
-            end
-            if (method == "FireServer" or method == "InvokeServer") and (self:IsA("RemoteEvent") or self:IsA("RemoteFunction")) then
+            if (method == "FireServer" or method == "InvokeServer") and self:IsA("RemoteEvent") or self:IsA("RemoteFunction") then
                 local remoteName = self.Name:lower()
-                if remoteName:find("kick") or remoteName:find("ban") or remoteName:find("punish") or remoteName:find("detect") or remoteName:find("cheat") then
+                if remoteName:find("kick") or remoteName:find("ban") or remoteName:find("punish") or remoteName:find("detect") then
                     return -- Block anti-cheat remote calls
                 end
             end
         end
-        -- S22: SILENT AIM — redirect Raycast/FindPartOnRay variations
-        if st.silentAim and obj.lockedTarget and not checkcaller() then
-            local part = getSilentTarget(obj.lockedTarget.Character)
-            if part then
-                local pos = predictPosition(part, obj.lockedTarget.Character)
-                local curvedDir = applyCurve(camera.CFrame.Position, pos)
-                
-                if method == "Raycast" and self == Workspace then
-                    local rayOrigin = camera.CFrame.Position
-                    local rayDirection = curvedDir * 1000
-                    return oldNc(self, rayOrigin, rayDirection, unpack(args, 3))
+        -- S22: SILENT AIM — redirect Raycast/FindPartOnRay
+        if st.silentAim and obj.lockedTarget then
+            if method == "Raycast" and self == Workspace then
+                local part = getSilentTarget(obj.lockedTarget.Character)
+                if part then
+                    local pos = predictPosition(part, obj.lockedTarget.Character)
+                    local curvedDir = applyCurve(camera.CFrame.Position, pos)
+                    local args = {...}; args[1] = camera.CFrame.Position; args[2] = curvedDir * 1000
+                    return oldNc(self, unpack(args))
                 end
-                if method == "FindPartOnRay" or method == "FindPartOnRayWithIgnoreList" or method == "FindPartOnRayWithWhitelist" then
+            end
+            if method == "FindPartOnRay" or method == "FindPartOnRayWithIgnoreList" then
+                local part = getSilentTarget(obj.lockedTarget.Character)
+                if part then
+                    local pos = predictPosition(part, obj.lockedTarget.Character)
+                    local curvedDir = applyCurve(camera.CFrame.Position, pos)
                     local newRay = Ray.new(camera.CFrame.Position, curvedDir * 1000)
-                    return oldNc(self, newRay, unpack(args, 2))
-                end
-                if method == "ScreenPointToRay" or method == "ViewportPointToRay" then
-                    return Ray.new(camera.CFrame.Position, curvedDir)
+                    local args = {...}; args[1] = newRay
+                    return oldNc(self, unpack(args))
                 end
             end
         end
@@ -2230,6 +2237,51 @@ local function addESP(plr)
         end
         data.skelFolder = skelFolder
     end) end
+    data.cn = RS.RenderStepped:Connect(function() pcall(function()
+        if not st.running then return end
+        if not char or not char.Parent or not head.Parent then
+            local d = obj.espObjs[plr]; if d then
+                pcall(function() if d.hl then d.hl:Destroy() end end)
+                pcall(function() if d.bb then d.bb:Destroy() end end)
+                pcall(function() if d.box then d.box:Destroy() end end)
+                pcall(function() if d.tracerGui then d.tracerGui:Destroy() end end)
+                pcall(function() if d.skelFolder then d.skelFolder:Destroy() end end)
+                pcall(function() if d.viewPart then d.viewPart:Destroy() end end)
+                pcall(function() if d.cn then d.cn:Disconnect() end end)
+                obj.espObjs[plr] = nil
+            end; return
+        end
+        if data.distLabel then data.distLabel.Text = math.floor((head.Position - camera.CFrame.Position).Magnitude) .. "m" end
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if hum and data.hpFill and hum.MaxHealth > 0 then local pct = math.clamp(hum.Health / hum.MaxHealth, 0, 1); data.hpFill.Size = UDim2.new(pct, 0, 1, 0); data.hpFill.BackgroundColor3 = pct > 0.5 and C.success or pct > 0.25 and C.warning or C.error end
+        -- Update View Angles (lightweight — only CFrame update)
+        if data.viewPart then
+            if st.viewAngles and head and head.Parent then
+                data.viewPart.CFrame = head.CFrame * CFrame.new(0, 0, -2.5)
+                data.viewPart.Transparency = 0.35
+            else
+                data.viewPart.Transparency = 1
+            end
+        end
+        -- Update tracer line position
+        if data.tracerLine and data.tracerGui then
+            local vp = camera.ViewportSize
+            local sp, onScreen = camera:WorldToViewportPoint(head.Position)
+            if onScreen and st.tracers then
+                data.tracerLine.Visible = true
+                local startX, startY = vp.X / 2, vp.Y
+                local endX, endY = sp.X, sp.Y
+                local dx, dy = endX - startX, endY - startY
+                local dist = math.sqrt(dx * dx + dy * dy)
+                local angle = math.atan2(dy, dx)
+                data.tracerLine.Size = UDim2.new(0, dist, 0, 1)
+                data.tracerLine.Position = UDim2.new(0, startX, 0, startY)
+                data.tracerLine.Rotation = math.deg(angle)
+            else
+                data.tracerLine.Visible = false
+            end
+        end
+    end) end)
     obj.espObjs[plr] = data
 end
 
@@ -2241,12 +2293,22 @@ end end)
 addConn(Players.PlayerAdded:Connect(function(plr) task.delay(2, function() if st.esp and st.running then pcall(function() addESP(plr) end) end end) end))
 addConn(Players.PlayerRemoving:Connect(function(plr) if obj.espObjs[plr] then local d = obj.espObjs[plr]; pcall(function() if d.hl then d.hl:Destroy() end end); pcall(function() if d.bb then d.bb:Destroy() end end); pcall(function() if d.box then d.box:Destroy() end end); pcall(function() if d.cn then d.cn:Disconnect() end end); obj.espObjs[plr] = nil end end))
 
--- Movement logic handled in Central Tick Engine
+-- Movement
 function enableFly() local c = player.Character; if not c then return end; local hrp = c:FindFirstChild("HumanoidRootPart"); if not hrp then return end; pcall(function() if obj.bv then obj.bv:Destroy() end end); pcall(function() if obj.bg then obj.bg:Destroy() end end); obj.bv = Instance.new("BodyVelocity"); obj.bv.MaxForce = Vector3.new(1e5,1e5,1e5); obj.bv.Velocity = Vector3.zero; obj.bv.Parent = hrp; obj.bg = Instance.new("BodyGyro"); obj.bg.MaxTorque = Vector3.new(1e5,1e5,1e5); obj.bg.P = 1e4; obj.bg.Parent = hrp end
 function disableFly() pcall(function() if obj.bv then obj.bv:Destroy(); obj.bv = nil end end); pcall(function() if obj.bg then obj.bg:Destroy(); obj.bg = nil end end) end
 
+addConn(RS.RenderStepped:Connect(function() if not st.running then return end
+    if st.fly and obj.bv and obj.bg then local cam = camera.CFrame; local mv = Vector3.zero
+        if UIS:IsKeyDown(Enum.KeyCode.W) then mv = mv + cam.LookVector end; if UIS:IsKeyDown(Enum.KeyCode.S) then mv = mv - cam.LookVector end
+        if UIS:IsKeyDown(Enum.KeyCode.A) then mv = mv - cam.RightVector end; if UIS:IsKeyDown(Enum.KeyCode.D) then mv = mv + cam.RightVector end
+        if UIS:IsKeyDown(Enum.KeyCode.Space) then mv = mv + Vector3.yAxis end; if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then mv = mv - Vector3.yAxis end
+        obj.bv.Velocity = mv.Magnitude > 0 and mv.Unit * cfg.flySpeed or Vector3.zero; obj.bg.CFrame = cam
+    end
+end))
 addConn(RS.Stepped:Connect(function() if not st.running then return end; if not (getgenv and getgenv().MedusaLoaded) then return end; if st.noclip and player.Character then for _, p in ipairs(player.Character:GetDescendants()) do if p:IsA("BasePart") then p.CanCollide = false end end end end))
+addConn(RS.RenderStepped:Connect(function() if not st.running then return end; if not (getgenv and getgenv().MedusaLoaded) then return end; if st.speed and player.Character then local h = player.Character:FindFirstChildOfClass("Humanoid"); if h then h.WalkSpeed = cfg.walkSpeed end end end))
 addConn(UIS.JumpRequest:Connect(function() if st.infJump and player.Character then local h = player.Character:FindFirstChildOfClass("Humanoid"); if h then h:ChangeState(Enum.HumanoidStateType.Jumping) end end end))
+addConn(RS.RenderStepped:Connect(function() if st.noFallDmg and player.Character then local h = player.Character:FindFirstChildOfClass("Humanoid"); if h then h:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false); h:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false) end end end))
 task.spawn(function() while st.running do task.wait(1/30); if st.spinBot and player.Character then local hrp = player.Character:FindFirstChild("HumanoidRootPart"); if hrp then hrp.CFrame = hrp.CFrame * CFrame.Angles(0, math.rad(cfg.spinSpeed), 0) end end end end)
 addConn(player.CharacterAdded:Connect(function() task.wait(0.5); if st.fly then enableFly() end end))
 
@@ -2876,7 +2938,18 @@ do
     table.insert(obj.themeElements, { obj = fovSk, prop = "Color" })
     obj.fovCircle = fovCircle
     obj.fovStroke = fovSk
-    -- FOV rendering moved to Central Tick Engine
+
+    addConn(RS.RenderStepped:Connect(function()
+        if st.aimbot and rmbDown then
+            local mp = UIS:GetMouseLocation()
+            local radius = cfg.aimbotFOV
+            fovCircle.Visible = true
+            fovCircle.Size = UDim2.new(0, radius * 2, 0, radius * 2)
+            fovCircle.Position = UDim2.new(0, mp.X, 0, mp.Y)
+        else
+            fovCircle.Visible = false
+        end
+    end))
 end
 
 -- ══════════════════════════════════════════════════════════════
@@ -3124,7 +3197,41 @@ do
     mkCorner(cDot, 2)
     table.insert(obj.themeElements, { obj = cDot, prop = "BackgroundColor3" })
 
-    -- Cursor logic moved to Central Tick Engine
+    -- Cursor follows mouse — only when panel is visible AND mouse is over panel
+    local cursorActive = false
+    addConn(RunService.RenderStepped:Connect(function()
+        if not st.running then return end
+        local mp = UIS:GetMouseLocation()
+        -- Show custom cursor when hovering over the Medusa panel
+        local panelObj = obj.panel
+        if panelObj and panelObj.Visible and st.guiVisible then
+            local px = panelObj.AbsolutePosition.X
+            local py = panelObj.AbsolutePosition.Y
+            local pw = panelObj.AbsoluteSize.X
+            local ph = panelObj.AbsoluteSize.Y
+            local isOver = mp.X >= px and mp.X <= px + pw and mp.Y >= py and mp.Y <= py + ph
+            if isOver then
+                curFrame.Visible = true
+                curFrame.Position = UDim2.new(0, mp.X, 0, mp.Y)
+                if not cursorActive then
+                    cursorActive = true
+                    pcall(function() UIS.MouseIconEnabled = false end)
+                end
+            else
+                if cursorActive then
+                    cursorActive = false
+                    curFrame.Visible = false
+                    pcall(function() UIS.MouseIconEnabled = true end)
+                end
+            end
+        else
+            if cursorActive then
+                cursorActive = false
+                curFrame.Visible = false
+                pcall(function() UIS.MouseIconEnabled = true end)
+            end
+        end
+    end))
 end
 
 -- ══════════════════════════════════════════════════════════════
@@ -3441,18 +3548,3 @@ print("  Cinematic Intro • Active HUD • Custom Cursor")
 print("  Glitch Animation • Boot Sounds • RGB Crosshair")
 print("═══════════════════════════════════════")
 print("Medusa v15.1: Cinematic Build Concluido")
-
--- ── S32: FINAL BOOTSTRAP ──────────────────────────────────
-task.spawn(function()
-    task.wait(0.5)
-    pcall(function()
-        if getgenv and (not getgenv().MedusaLoaded) then return end
-        print("[Medusa] Finalizing environment sync...")
-        -- Re-verify camera one last time before full logic starts
-        if not camera then camera = Workspace.CurrentCamera end
-        if not camera then camera = waitForCamera(5) or Workspace.CurrentCamera end
-        -- Force initial tab sync
-        if obj and obj.switchTab then obj.switchTab("status") end
-        print("[Medusa] 🐍 FULLY OPERATIONAL!")
-    end)
-end)
