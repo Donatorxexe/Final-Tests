@@ -24,22 +24,17 @@
              End=Panic  RMB=Lock Target
 --]]
 
--- S1: ANTI-DUPLICATE
+-- S1: MEDUSA GLOBAL TABLE
+local Medusa = { cfg = {}, st = {}, obj = {} }
+
+-- S2: ANTI-DUPLICATE
 if getgenv and getgenv().MedusaLoaded then
     pcall(function() if getgenv().MedusaEject then getgenv().MedusaEject() end end)
     task.wait(0.5)
 end
 if getgenv then getgenv().MedusaLoaded = true end
 
--- S2: POLYFILLS & XENO COMPATIBILITY
-if not task or not task.wait then
-    task = task or {}
-    task.wait = task.wait or wait
-    task.spawn = task.spawn or function(f) local co = coroutine.create(f); coroutine.resume(co); return co end
-    task.delay = task.delay or function(t, f) local co = coroutine.create(function() wait(t); f() end); coroutine.resume(co); return co end
-    task.cancel = task.cancel or function() end
-end
-
+-- S3: SERVICES & POLYFILLS
 local function getService(name) local ok, svc = pcall(function() return game:GetService(name) end); return ok and svc or nil end
 
 local Players = getService("Players")
@@ -57,10 +52,18 @@ local Lighting = getService("Lighting")
 local SoundService = getService("SoundService")
 local LocalizationService = getService("LocalizationService")
 
+if not task or not task.wait then
+    task = task or {}
+    task.wait = task.wait or wait
+    task.spawn = task.spawn or function(f) local co = coroutine.create(f); coroutine.resume(co); return co end
+    task.delay = task.delay or function(t, f) local co = coroutine.create(function() wait(t); f() end); coroutine.resume(co); return co end
+    task.cancel = task.cancel or function() end
+end
+
 local UIS = UserInputService
 local TS = TweenService
 
--- S2B: STABILITY GUARDS (services/player/camera readiness)
+-- S3B: STABILITY GUARDS (services/player/camera readiness)
 if not Players or not Workspace or not RunService or not TweenService then
     warn("[Medusa] Missing required services; aborting to avoid nil crashes.")
     return
@@ -93,76 +96,20 @@ local function createSound(id, volume, pitch)
     return s
 end
 
+--[[ SOUND SYSTEM BYPASSED FOR STABILITY
 local uiClickSound = createSound(6895079853, 0.25, 1.1)   -- subtle click
 local uiTabSound = createSound(6895079853, 0.15, 0.75)    -- deeper tab switch
 local uiToggleOnSound = createSound(6895079853, 0.2, 1.3) -- higher pitch ON
 local uiToggleOffSound = createSound(6895079853, 0.2, 0.9) -- lower pitch OFF
+]]
 
-local function playClick() pcall(function() if uiClickSound and uiClickSound.Parent then uiClickSound:Play() end end) end
-local function playTab() pcall(function() if uiTabSound and uiTabSound.Parent then uiTabSound:Play() end end) end
-local function playToggleOn() pcall(function() if uiToggleOnSound and uiToggleOnSound.Parent then uiToggleOnSound:Play() end end) end
-local function playToggleOff() pcall(function() if uiToggleOffSound and uiToggleOffSound.Parent then uiToggleOffSound:Play() end end) end
+local function playClick() --[[ pcall(function() if uiClickSound and uiClickSound.Parent then uiClickSound:Play() end end) ]] end
+local function playTab() --[[ pcall(function() if uiTabSound and uiTabSound.Parent then uiTabSound:Play() end end) ]] end
+local function playToggleOn() --[[ pcall(function() if uiToggleOnSound and uiToggleOnSound.Parent then uiToggleOnSound:Play() end end) ]] end
+local function playToggleOff() --[[ pcall(function() if uiToggleOffSound and uiToggleOffSound.Parent then uiToggleOffSound:Play() end end) ]] end
 
--- ── Location Detection (runs ONCE) ──────────────────────────
-local myRegion = "??"   -- Player's own country (from locale)
-local svRegion = "??"   -- Server's actual location (from IP)
+-- ── Location Detection Moved to Bottom ──────────────────────
 
-task.spawn(function()
-    -- STEP 1: Detect MY location (from client locale — always works)
-    pcall(function()
-        if LocalizationService and LocalizationService.GetCountryRegionForPlayerAsync then
-            local code = LocalizationService:GetCountryRegionForPlayerAsync(Players.LocalPlayer)
-            if code and code ~= "" then myRegion = code end
-        end
-    end)
-    if myRegion == "??" then pcall(function()
-        local lid = (LocalizationService and LocalizationService.SystemLocaleId) or Players.LocalPlayer.LocaleId or ""
-        local r = lid:match("%-(%a%a)$") or lid:match("^(%a%a)$")
-        if r then myRegion = r:upper() end
-    end) end
-
-    -- STEP 2: Detect SERVER location (via HTTP IP geolocation)
-    pcall(function()
-        local httpGet = game.HttpGet or (HttpService and HttpService.GetAsync)
-        if not httpGet then svRegion = myRegion; return end
-
-        -- Try ip-api.com first (free, no key needed)
-        local ok, raw = pcall(function() return game:HttpGet("http://ip-api.com/json/?fields=status,country,regionName,city,countryCode") end)
-        if ok and raw and raw ~= "" then
-            local data = HttpService:JSONDecode(raw)
-            if data and data.status == "success" then
-                local cc = data.countryCode or "??"
-                local city = data.city or data.regionName or ""
-                if city ~= "" then
-                    svRegion = cc .. ", " .. city
-                else
-                    svRegion = cc
-                end
-                print("[Medusa] 🌍 Server: " .. svRegion)
-                return
-            end
-        end
-
-        -- Fallback: try ipinfo.io
-        local ok2, raw2 = pcall(function() return game:HttpGet("https://ipinfo.io/json") end)
-        if ok2 and raw2 and raw2 ~= "" then
-            local data2 = HttpService:JSONDecode(raw2)
-            if data2 then
-                local country = data2.country or "??"
-                local city = data2.city or ""
-                svRegion = city ~= "" and (country .. ", " .. city) or country
-                print("[Medusa] 🌍 Server (ipinfo): " .. svRegion)
-                return
-            end
-        end
-
-        -- Final fallback: use my region as server region
-        svRegion = myRegion ~= "??" and myRegion or "LIVE"
-    end)
-
-    if svRegion == "??" then svRegion = myRegion ~= "??" and myRegion or "LIVE" end
-    print("[Medusa] 👤 ME: " .. myRegion .. " | 🖥️ SV: " .. svRegion)
-end)
 local RS = RunService
 
 local player = waitForLocalPlayer(15) or Players.LocalPlayer
@@ -633,6 +580,7 @@ local function mkCorner(parent, radius)
 end
 
 local function mkCard(parent, height, order)
+    if not parent then return end
     local c = Instance.new("Frame")
     c.Size = UDim2.new(1, 0, 0, height)
     c.AutomaticSize = Enum.AutomaticSize.Y -- auto-grow if content overflows
@@ -653,6 +601,7 @@ local function mkCard(parent, height, order)
 end
 
 local function mkLabel(parent, text, size, color, x, y, w, h)
+    if not parent then return end
     local l = Instance.new("TextLabel")
     l.Size = UDim2.new(w or 1, w == 1 and -20 or 0, 0, h or 20)
     l.Position = UDim2.new(0, x or 10, 0, y or 8)
@@ -663,6 +612,7 @@ local function mkLabel(parent, text, size, color, x, y, w, h)
 end
 
 local function mkSep(parent, order)
+    if not parent then return end
     local s = Instance.new("Frame")
     s.Size = UDim2.new(1, -20, 0, 1); s.Position = UDim2.new(0, 10, 0, 0)
     s.BackgroundColor3 = C.border; s.BackgroundTransparency = 0.6
@@ -672,6 +622,7 @@ end
 
 -- ── GLASS TOGGLE ───────────────────────────────────────────
 local function mkToggle(parent, text, default, order, callback)
+    if not parent then return end
     local TW, TH = cfg.gui.toggleW, cfg.gui.toggleH
 
     local row = Instance.new("Frame")
@@ -794,6 +745,7 @@ end
 
 -- ── GLASS SLIDER ───────────────────────────────────────────
 local function mkSlider(parent, text, initVal, minV, maxV, order, callback)
+    if not parent then return end
     local row = Instance.new("Frame")
     row.Size = UDim2.new(1, 0, 0, 48)
     row.BackgroundColor3 = C.glassHi; row.BackgroundTransparency = 0.88
@@ -877,6 +829,7 @@ end
 
 -- ── GLASS BUTTON ───────────────────────────────────────────
 local function mkBtn(parent, text, color, order, callback)
+    if not parent then return end
     local ac = color or C.accent
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(1, 0, 0, cfg.gui.btnH)
@@ -918,6 +871,7 @@ local function mkBtn(parent, text, color, order, callback)
 end
 
 local function mkPartSelector(parent, order)
+    if not parent then return end
     local row = Instance.new("Frame")
     row.Size = UDim2.new(1, 0, 0, 34); row.BackgroundTransparency = 1
     row.LayoutOrder = order or 0; row.Parent = parent
@@ -3533,6 +3487,67 @@ print("Medusa v15.1: Cinematic Build Concluido")
 
 -- ── S32: FINAL BOOTSTRAP ──────────────────────────────────
 task.spawn(function()
+    -- ── Location Detection (Moved for Stability) ──────────────
+    local myRegion = "??"   -- Player's own country (from locale)
+    local svRegion = "??"   -- Server's actual location (from IP)
+
+    pcall(function()
+        -- STEP 1: Detect MY location (from client locale — always works)
+        pcall(function()
+            if LocalizationService and LocalizationService.GetCountryRegionForPlayerAsync then
+                local code = LocalizationService:GetCountryRegionForPlayerAsync(Players.LocalPlayer)
+                if code and code ~= "" then myRegion = code end
+            end
+        end)
+        if myRegion == "??" then pcall(function()
+            local lid = (LocalizationService and LocalizationService.SystemLocaleId) or Players.LocalPlayer.LocaleId or ""
+            local r = lid:match("%-(%a%a)$") or lid:match("^(%a%a)$")
+            if r then myRegion = r:upper() end
+        end) end
+
+        -- STEP 2: Detect SERVER location (via HTTP IP geolocation)
+        pcall(function()
+            local httpGet = game.HttpGet or (HttpService and HttpService.GetAsync)
+            if not httpGet then svRegion = myRegion; return end
+
+            -- Try ip-api.com first (free, no key needed)
+            local ok, raw = pcall(function() return game:HttpGet("http://ip-api.com/json/?fields=status,country,regionName,city,countryCode") end)
+            if ok and raw and raw ~= "" then
+                local data = HttpService:JSONDecode(raw)
+                if data and data.status == "success" then
+                    local cc = data.countryCode or "??"
+                    local city = data.city or data.regionName or ""
+                    if city ~= "" then
+                        svRegion = cc .. ", " .. city
+                    else
+                        svRegion = cc
+                    end
+                    print("[Medusa] 🌍 Server: " .. svRegion)
+                    return
+                end
+            end
+
+            -- Fallback: try ipinfo.io
+            local ok2, raw2 = pcall(function() return game:HttpGet("https://ipinfo.io/json") end)
+            if ok2 and raw2 and raw2 ~= "" then
+                local data2 = HttpService:JSONDecode(raw2)
+                if data2 then
+                    local country = data2.country or "??"
+                    local city = data2.city or ""
+                    svRegion = city ~= "" and (country .. ", " .. city) or country
+                    print("[Medusa] 🌍 Server (ipinfo): " .. svRegion)
+                    return
+                end
+            end
+
+            -- Final fallback: use my region as server region
+            svRegion = myRegion ~= "??" and myRegion or "LIVE"
+        end)
+
+        if svRegion == "??" then svRegion = myRegion ~= "??" and myRegion or "LIVE" end
+        print("[Medusa] 👤 ME: " .. myRegion .. " | 🖥️ SV: " .. svRegion)
+    end)
+
     task.wait(0.5)
     pcall(function()
         if getgenv and (not getgenv().MedusaLoaded) then return end
